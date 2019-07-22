@@ -8,7 +8,7 @@ if (slices >= frames) {
 	sliceCount = frames;	
 }
 
-f = File.openAsString("/Users/zhangyujie/Desktop/NanoTools Bioscience/sorted_roi.txt");
+f = File.openAsString("/Users/zhangyujie/Desktop/NanoTools_Bioscience/proj_cardiomyocytes_movement/new_algorithm/sorted_roi.txt");
 lines = split(f, "\n");
 numRoi = newArray(lines.length);
 slide = newArray(lines.length);
@@ -17,7 +17,7 @@ y = newArray(lines.length);
 
 a = 4;
 selectWindow("Stage");
-min_square_mov = 4;
+min_square_mov = 0;
 //firstL = split(lines[0], " ");
 for (i = 1; i < lines.length; i++ ) {
 	lastL = split(lines[i - 1], " ");
