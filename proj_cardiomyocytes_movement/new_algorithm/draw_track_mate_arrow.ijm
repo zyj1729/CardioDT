@@ -8,7 +8,7 @@ if (slices >= frames) {
 	sliceCount = frames;	
 }
 
-f = File.openAsString("/Users/zhangyujie/Desktop/NanoTools_Bioscience/proj_cardiomyocytes_movement/new_algorithm/sorted_roi.txt");
+f = File.openAsString("/Users/zhangyujie/Desktop/NanoBio_main_folder/NanoTools_Bioscience/proj_cardiomyocytes_movement/new_algorithm/sorted_roi.txt");
 lines = split(f, "\n");
 numRoi = newArray(lines.length);
 slide = newArray(lines.length);

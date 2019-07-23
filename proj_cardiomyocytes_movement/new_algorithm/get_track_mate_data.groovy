@@ -3,10 +3,13 @@
 #@ String (label = "Output file name") filename
 #@ double (label = "Spot radius", stepSize=0.1) radius
 #@ double (label = "Quality threshold") threshold
-#@ int (label = "Max frame gap") frameGap
+//#@ int (label = "Max frame gap") frameGap
 #@ double (label = "Linking max distance") linkingMax
-#@ double (label = "Gap-closing max distance") closingMax
+//#@ double (label = "Gap-closing max distance") closingMax
 
+
+import ij.*
+import ij.plugin.*
 import javax.swing.*
 import fiji.plugin.trackmate.Model
 import fiji.plugin.trackmate.Settings
@@ -18,6 +21,8 @@ import fiji.plugin.trackmate.action.ExportTracksToXML
 //import fiji.plugin.trackmate.action.ExportAllSpotsStatsAction
 import fiji.plugin.trackmate.action.ExportStatsToIJAction
 
+closingMax = 2;
+frameGap = 2;
 
 // Pop up an input box to user
 def prompt = {
@@ -63,7 +68,6 @@ println trackmate.getErrorMessage()
 println model.getSpots().getNSpots(true)
 println model.getTrackModel().nTracks(true)
 
-//def first = prompt("Current ROIs detected " + )
 
 // Save tracks as XML
 if (!filename.endsWith(".xml")) {
