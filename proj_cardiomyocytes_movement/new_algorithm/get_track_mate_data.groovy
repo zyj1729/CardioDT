@@ -7,9 +7,6 @@
 #@ double (label = "Linking max distance") linkingMax
 //#@ double (label = "Gap-closing max distance") closingMax
 
-
-import ij.*
-import ij.plugin.*
 import javax.swing.*
 import fiji.plugin.trackmate.Model
 import fiji.plugin.trackmate.Settings
