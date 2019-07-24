@@ -122,10 +122,11 @@ for (i = 1; i < lines.length; i++ ) {
 }
 	
 
-/*  .1. trackMate will recognize white space as ROIs, need to remove it to save time. 
+/*  .1. trackMate will recognize white space as ROIs, need to remove it to save time. done. 
  *  .2. Need to find a way to automatically find the proper threshold or at least let the user
  *  change the threshold in a preview window. 
- *  .3. call the 3 plugins in the main script.
- *  .4. push codes to github.
+ *  .3. call the 3 plugins in the main script. done.
+ *  .4. push codes to github. done. 
+ *  .5. add orientation and graph. decide whether use python or ijm. 
  */
 
