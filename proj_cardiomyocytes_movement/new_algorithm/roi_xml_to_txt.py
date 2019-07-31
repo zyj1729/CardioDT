@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-tree = ET.parse('/Users/zhangyujie/Desktop/NanoBio_main_folder/NanoTools_Bioscience/proj_cardiomyocytes_movement/new_algorithm/test_trackmate_script.xml')
+tree = ET.parse('/Users/zhangyujie/Desktop/NanoBio_main_folder/NanoTools_Bioscience/proj_cardiomyocytes_movement/new_algorithm/raw_movement_data.xml')
 root = tree.getroot()
 
 numRoi = []

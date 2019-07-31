@@ -1,11 +1,13 @@
 #@ ImagePlus imp
 #@ File (style = "directory", label = "Output folder") outputFolder
-#@ String (label = "Output file name") filename
 #@ double (label = "Spot radius", stepSize=0.1) radius
 #@ double (label = "Quality threshold") threshold
-//#@ int (label = "Max frame gap") frameGap
-#@ double (label = "Linking max distance") linkingMax
-//#@ double (label = "Gap-closing max distance") closingMax
+
+
+filename = "raw_movement_data"
+double linkingMax = 15.0
+frameGap = 2
+double closingMax = 2.0
 
 import javax.swing.*
 import fiji.plugin.trackmate.Model
@@ -17,9 +19,6 @@ import fiji.plugin.trackmate.tracking.sparselap.SparseLAPTrackerFactory
 import fiji.plugin.trackmate.action.ExportTracksToXML
 //import fiji.plugin.trackmate.action.ExportAllSpotsStatsAction
 import fiji.plugin.trackmate.action.ExportStatsToIJAction
-
-closingMax = 2;
-frameGap = 2;
 
 // Pop up an input box to user
 def prompt = {
