@@ -1,9 +1,11 @@
 #@ ImagePlus imp
-#@ File (style = "directory", label = "Output folder") outputFolder
-#@ double (label = "Spot radius", stepSize=0.1) radius
 #@ double (label = "Quality threshold") threshold
 
-
+outputFolder = "cat Working_Directory.txt".execute().text
+outputFolder = outputFolder + "medium_products/"
+File radiusFile = new File(outputFolder + "approx_roi_radius.txt")
+String fileContent = radiusFile.text
+double radius = fileContent.toDouble()
 filename = "raw_movement_data"
 double linkingMax = 15.0
 frameGap = 2

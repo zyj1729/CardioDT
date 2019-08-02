@@ -1,22 +1,4 @@
-
-roiManager("reset");
-
-// Get the ROI track mate data by calling 2 functions. 
-originId = getImageID();
-run("get track mate data");
-run("roi xml to txt");
-
-// Calculate oval redius. 
-getDimensions(width, height, channels, slices, frames);
-var ovalRadius = 0;
-refRadius = 10;
-refWidth = 1000;
-refHeight = 700;
-ovalRadius = round(sqrt(pow(refRadius, 2) * ((width * height) / (refWidth * refHeight))));
-
-
-var f = File.openAsString("/Users/zhangyujie/Desktop/NanoBio_main_folder/NanoTools_Bioscience/proj_cardiomyocytes_movement/new_algorithm/sorted_roi.txt");
-var lines = split(f, "\n");
+currentFolder = getDirectory("startup");
 var mark;
 var markCount = 0;
 // Filter out the ROIs that has pixel value 255, which are the white shadow. 
@@ -42,7 +24,7 @@ function filter255(array) {
 
 // A function to draw the ROIs in the first slice as preview. 
 function preview() {
-	f = File.openAsString("/Users/zhangyujie/Desktop/NanoBio_main_folder/NanoTools_Bioscience/proj_cardiomyocytes_movement/new_algorithm/sorted_roi.txt");
+	f = File.openAsString(folder + "medium_products/sorted_roi.txt");
 	lines = split(f, "\n");
 	filter255(lines);
 	setSlice(1);
@@ -69,93 +51,159 @@ function preview() {
 }
 
 // A preview window to let users decide if the number of ROIs is acceptable. 
-satisfaction = false;
-time = 0;
-while (satisfaction == false) {
-	if (time != 0) {
-		run("get track mate data");
-		run("roi xml to txt");
-		roiManager("reset");
-	}
-	time++;
-	selectImage(originId);
-	preview();
-	Dialog.create("Preview");
-	Dialog.addCheckbox("Satisfied ?", false);
-	Dialog.show();
-	satisfaction = Dialog.getCheckbox();
-}
-
-
-// Draw arrows. 
-run("Duplicate...", "title=Stage duplicate");
-sliceCount = 0;
-if (slices >= frames) {
-	sliceCount = slices;
-} else {
-	sliceCount = frames;	
-}
-
-numRoi = newArray(lines.length);
-slide = newArray(lines.length);
-x = newArray(lines.length);
-y = newArray(lines.length);
-
-a = 4;
-selectWindow("Stage");
-min_square_mov = 0;
-for (i = 1; i < lines.length; i++ ) {
-//	if (i < sliceCount) {
-//		setResult("Slice Number", i - 1, i + 1);
-//	}
-	if (mark[i] == 1) {
-		continue;	
-	}
-	lastL = split(lines[i - 1], " ");
-	currL = split(lines[i], " ");
-//	if (parseInt(currL[1]) < sliceCount - 1) {
-//		nextL = split(lines[i + 1], " ");
-//	}
-	if (lastL[0] == currL[0] && pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2) > min_square_mov) {
-		setSlice(currL[1] + 1);
-		makeArrow(round(lastL[2]), round(lastL[3]), round(lastL[2]) + a * (round(currL[2]) - round(lastL[2])), round(lastL[3]) + a * (round(currL[3]) - round(lastL[3])), "filled");
-		run("Arrow Tool...", "width=1 size=4 color=Green style=Open");	
-		Roi.setStrokeColor("green");
-		run("Add Selection...");	
-	} 
-//	if (parseInt(currL[1]) < sliceCount - 1) {
-//		dir = getDirection(parseFloat(currL[2]), parseFloat(currL[3]), parseFloat(nextL[2]), parseFloat(nextL[3]), parseFloat(lastL[2]), parseFloat(lastL[3]), parseFloat(currL[2]), parseFloat(currL[3]));
-//		setResult("Start X" + currL[0], lastL[1], lastL[2]);
-//		setResult("Start Y" + currL[0], lastL[1], lastL[3]);
-//		setResult("End X" + currL[0], lastL[1], currL[2]);
-//		setResult("End X" + currL[0], lastL[1], currL[3]);
-//		setResult("Movement Length " + currL[0], lastL[1], sqrt(pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2)));
-//		setResult("Direction Change " + currL[0] + " (degree)", lastL[1], dir);
-//	}
+var f;
+var lines;
+var folder;
+macro "workStage" {
+	folder = getDirectory("Choose a Directory");
+	File.saveString(folder, currentFolder + "Working_Directory.txt");
+	isMp = File.isDirectory(folder + "medium_products/");
 	
-}
+	if (isMp == 0) {
+		File.makeDirectory(folder + "medium_products/");	
+	}
 
-for (i = 1; i < lines.length; i++ ) {
-	if (i < sliceCount) {
-		setResult("Slice Number", i - 1, i + 1);
+	roiManager("reset");
+	// Calculate oval redius. 
+	getDimensions(width, height, channels, slices, frames);
+	var ovalRadius = 0;
+	refRadius = 10;
+	refWidth = 1000;
+	refHeight = 700;
+	ovalRadius = round(sqrt(pow(refRadius, 2) * ((width * height) / (refWidth * refHeight))));
+	File.saveString(d2s(ovalRadius, 0), folder + "medium_products/approx_roi_radius.txt");
+	
+	// Get the ROI track mate data by calling 2 functions. 
+	originId = getImageID();
+	run("get track mate data");
+	run("roi xml to txt");
+	f = File.openAsString(folder + "medium_products/sorted_roi.txt");
+	lines = split(f, "\n");
+
+	
+	satisfaction = false;
+	time = 0;
+	while (satisfaction == false) {
+		if (time != 0) {
+			run("get track mate data");
+			run("roi xml to txt");
+			roiManager("reset");
+		}
+		time++;
+		selectImage(originId);
+		preview();
+		Dialog.create("Preview");
+		Dialog.addCheckbox("Satisfied ?", false);
+		Dialog.show();
+		satisfaction = Dialog.getCheckbox();
 	}
-	if (mark[i] == 1) {
-		continue;	
+	
+	
+	// Draw arrows. 
+	run("Duplicate...", "title=Stage duplicate");
+	sliceCount = 0;
+	if (slices >= frames) {
+		sliceCount = slices;
+	} else {
+		sliceCount = frames;	
 	}
-	lastL = split(lines[i - 1], " ");
-	currL = split(lines[i], " ");
-	if (parseInt(currL[1]) < sliceCount - 1) {
-		nextL = split(lines[i + 1], " ");
+	
+	numRoi = newArray(lines.length);
+	slide = newArray(lines.length);
+	x = newArray(lines.length);
+	y = newArray(lines.length);
+	
+	a = 4;
+	selectWindow("Stage");
+	min_square_mov = 0;
+	for (i = 1; i < lines.length; i++ ) {
+		if (mark[i] == 1) {
+			continue;	
+		}
+		lastL = split(lines[i - 1], " ");
+		currL = split(lines[i], " ");
+		if (lastL[0] == currL[0] && pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2) > min_square_mov) {
+			setSlice(currL[1] + 1);
+			makeArrow(round(lastL[2]), round(lastL[3]), round(lastL[2]) + a * (round(currL[2]) - round(lastL[2])), round(lastL[3]) + a * (round(currL[3]) - round(lastL[3])), "filled");
+			run("Arrow Tool...", "width=1 size=4 color=Green style=Open");	
+			Roi.setStrokeColor("green");
+			run("Add Selection...");	
+		} 
+		
 	}
-	if (parseInt(currL[1]) < sliceCount - 1) {
-		dir = getDirection(parseFloat(currL[2]), parseFloat(currL[3]), parseFloat(nextL[2]), parseFloat(nextL[3]), parseFloat(lastL[2]), parseFloat(lastL[3]), parseFloat(currL[2]), parseFloat(currL[3]));
-		setResult("Start X" + currL[0], lastL[1], lastL[2]);
-		setResult("Start Y" + currL[0], lastL[1], lastL[3]);
-		setResult("End X" + currL[0], lastL[1], currL[2]);
-		setResult("End X" + currL[0], lastL[1], currL[3]);
-		setResult("Movement Length " + currL[0], lastL[1], sqrt(pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2)));
-		setResult("Direction Change " + currL[0] + " (degree)", lastL[1], dir);
+	
+	for (i = 1; i < lines.length; i++ ) {
+		if (i < sliceCount) {
+			setResult("Slice Number", i - 1, i + 1);
+		}
+		if (mark[i] == 1) {
+			continue;	
+		}
+		lastL = split(lines[i - 1], " ");
+		currL = split(lines[i], " ");
+		if (parseInt(currL[1]) < sliceCount - 1 && i != (lines.length - 1)) {
+			nextL = split(lines[i + 1], " ");
+		}
+		if (parseInt(currL[1]) < sliceCount - 1 && lastL[0] == currL[0]) {
+			dir = getDirection(parseFloat(currL[2]), parseFloat(currL[3]), parseFloat(nextL[2]), parseFloat(nextL[3]), parseFloat(lastL[2]), parseFloat(lastL[3]), parseFloat(currL[2]), parseFloat(currL[3]));
+			setResult("Start X" + currL[0], lastL[1], lastL[2]);
+			setResult("Start Y" + currL[0], lastL[1], lastL[3]);
+			setResult("End X" + currL[0], lastL[1], currL[2]);
+			setResult("End Y" + currL[0], lastL[1], currL[3]);
+			setResult("Movement Length " + currL[0], lastL[1], sqrt(pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2)));
+			setResult("Direction Change " + currL[0] + " (degree)", lastL[1], dir);
+		}
 	}
+
+	Dialog.create("Want to save the results?");
+	Dialog.addCheckbox("Save the result table as excel?", 0);
+	Dialog.addCheckbox("Save the arrows animation?", 0);
+	Dialog.show();
+	excelB = Dialog.getCheckbox();
+	arrowB = Dialog.getCheckbox();
+	if (excelB == 1) {
+		isRe = File.isDirectory(folder + "results/");
+		if (isRe == 0) {
+			File.makeDirectory(folder + "results/");
+			isReEx = File.isDirectory(folder + "results/excel_data/");
+			if (isReEx == 0) {
+				File.makeDirectory(folder + "results/excel_data/");
+			}
+		} else {
+			isReEx = File.isDirectory(folder + "results/excel_data/");
+			if (isReEx == 0) {
+				File.makeDirectory(folder + "results/excel_data/");
+			}
+		}
+		selectImage(originId);
+		temp = getInfo("image.filename");
+		wholeName = split(temp, ".");
+		imageName = wholeName[0];
+		run("Read and Write Excel", "file=[" + folder + "results/excel_data/" + imageName + "_data.xlsx]");
+	}
+	if (arrowB == 1) {
+		isRe = File.isDirectory(folder + "results/");
+		if (isRe == 0) {
+			File.makeDirectory(folder + "results/");
+			isReAr = File.isDirectory(folder + "results/arrows_animations/");
+			if (isReAr == 0) {
+				File.makeDirectory(folder + "results/arrows_animations/");	
+			}
+		} else {
+			isReAr = File.isDirectory(folder + "results/arrows_animations/");
+			if (isReAr == 0) {
+				File.makeDirectory(folder + "results/arrows_animations/");	
+			}	
+		}
+		selectImage(originId);
+		temp = getInfo("image.filename");
+		wholeName = split(temp, ".");
+		imageName = wholeName[0];
+		selectWindow("Stage");
+		saveAs("Tiff", folder + "results/arrows_animations/" + imageName + "_stage");
+	}
+	
+
 }
 
 function getDirection(oriX, oriY, desX, desY, formOriX, formOriY, formDesX, formDesY) {
