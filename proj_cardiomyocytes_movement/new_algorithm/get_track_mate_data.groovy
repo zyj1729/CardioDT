@@ -1,7 +1,8 @@
 #@ ImagePlus imp
 #@ double (label = "Quality threshold") threshold
 
-outputFolder = "cat Working_Directory.txt".execute().text
+File outputFolderFile = new File("./Working_Directory.txt")
+String outputFolder = outputFolderFile.text
 outputFolder = outputFolder + "medium_products/"
 File radiusFile = new File(outputFolder + "approx_roi_radius.txt")
 String fileContent = radiusFile.text
