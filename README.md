@@ -24,7 +24,7 @@
 
 ![workflow](setup_flow2.png)
 
-- Use Bio-Format to open your video
+- Use Bio-Format to open your video by typing it in the search bar.
 
 ![workflow](setup_flow5.png)
 
