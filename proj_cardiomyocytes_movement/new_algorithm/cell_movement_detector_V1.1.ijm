@@ -152,6 +152,9 @@ var lines;
 var folder;
 var animation;
 macro "workStage" {
+//	setOption("Min & max gray value", true);
+	setOption("mean", true);
+	setOption("Std", true);
 	folder = getDirectory("Choose a Directory");
 	File.saveString(folder, currentFolder + "Working_Directory.txt");
 	isMp = File.isDirectory(folder + "medium_products/");
@@ -363,23 +366,37 @@ macro "workStage" {
 		ranges[z] = range;
 	}
 	
-	ranges = Array.sort(ranges);
-	low_ind = floor(ranges.length * 0.3);
-	mid_ind = low_ind + floor(ranges.length * 0.4);
-	low = Array.slice(ranges, 0, low_ind);
-	mid = Array.slice(ranges, low_ind, mid_ind);
-	top = Array.slice(ranges, mid_ind, ranges.length);
+	Dialog.create("Move Length Separation");
+	Dialog.addSlider("Number of layers: ", 0, 10, 3);
+	Dialog.show();
+	ll = Dialog.getNumber();
+
 	IJ.renameResults("output_data");
-	
-	Array.getStatistics(low, min_low, max_low, mean_low, stdDev_low);
-	Array.getStatistics(mid, min_mid, max_mid, mean_mid, stdDev_mid);
-	Array.getStatistics(top, min_top, max_top, mean_top, stdDev_top);
-	mins = newArray(min_low, min_mid, min_top);
-	maxs = newArray(max_low, max_mid, max_top);
-	means = newArray(mean_low, mean_mid, mean_top);
-	stds = newArray(stdDev_low, stdDev_mid, stdDev_top);
+	ranges = Array.sort(ranges);
+	start = 0;
+	cap = floor(ranges.length * (1 / ll));
+	mins = newArray(ll);
+	maxs = newArray(ll);
+	means = newArray(ll);
+	stds = newArray(ll);
+	nums = newArray(ll);
+	for (i = 0; i < ll; i++) {
+		if (i != ll - 1) {
+			curr = 	Array.slice(ranges, start, start + cap);
+		} else {
+			curr = 	Array.slice(ranges, start, ranges.length);
+		}
+		Array.getStatistics(curr, min, max, mean, stdDev);
+		mins[i] = min;
+		maxs[i] = max;
+		means[i] = mean;
+		stds[i] = stdDev;
+		nums[i] = curr.length;
+		start = start + cap;
+	}
 	
 	Table.create("Movement_Layers");
+	Table.setColumn("num", nums);
 	Table.setColumn("mean", means);
 	Table.setColumn("stdDev", stds);
 	Table.setColumn("max", maxs);
