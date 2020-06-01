@@ -34,9 +34,12 @@
 
 ![workflow](setup_flow6.png)
 
-- Set the threshold for detecting cells. Check the satisfaction box if you want to continue or keep setting new threshold untill you satisfied. Let the program do the work. Ignore any exception popup windows if the program is not aborted. 
+- Set the threshold for detecting cells. Set the minimum number of slides the ROI has to last to be considered in the output. 
 
 ![workflow](setup_flow7.png)
+![workflow]
+
+- Check the satisfaction box if you want to continue or keep setting new threshold untill you are satisfied. Let the program do the work. Ignore any exception popup windows if the program is not aborted. 
 
 - Save the data as excel and the arrow animations by checking the boxes. You can still see the result table an the arrows animation window if you leave them blank. 
 
