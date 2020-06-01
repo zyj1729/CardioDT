@@ -37,14 +37,23 @@
 - Set the threshold for detecting cells. Set the minimum number of slides the ROI has to last to be considered in the output. 
 
 ![workflow](setup_flow7.png)
-![workflow]
+![workflow](setup_flow9.png)
 
 - Check the satisfaction box if you want to continue or keep setting new threshold untill you are satisfied. Let the program do the work. Ignore any exception popup windows if the program is not aborted. 
 
-- Save the data as excel and the arrow animations by checking the boxes. You can still see the result table an the arrows animation window if you leave them blank. 
+![workflow](setup_flow10.png)
+
+- Save the data as excel and the arrow animations by checking the boxes. Leave them blank if you just want to see a layer result.
 
 ![workflow](setup_flow8.png)
 
+- Set the number of layers to divide the ROIs. The layers are ordered based on the average movement lengths of ROIs in each layer.  
+
+![workflow](setup_flow11.png)
+
+- Finally, check the output result. The movement length is increasing from top to bottom. "num" is the number of ROIs in that layer. 
+
+![workflow](setup_flow12.png)
 ## Citation
 
 Tinevez, JY.; Perry, N. & Schindelin, J. et al. (2016), "TrackMate: An open and extensible platform for single-particle tracking.", Methods 115: 80-90, PMID 27713081 (on Google Scholar).
