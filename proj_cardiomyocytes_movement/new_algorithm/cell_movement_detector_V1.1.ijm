@@ -214,8 +214,8 @@ macro "workStage" {
 	Dialog.create("ROI Correction");
 	Dialog.addNumber("spike nums", 2, 0, 5, "");
 	Dialog.addNumber("spike persistance", 8, 0, 5, "slides");
-	Dialog.addNumber("adjacent spikes gap >= ", 20, 0, 5, "slides");
-	Dialog.addCheckbox("Exact spike num? (uncheck: >=)", false);
+	Dialog.addNumber("adjacent spikes gap", 20, 0, 5, "slides");
+	Dialog.addCheckbox("exact spike num (uncheck: >=)", false);
 	Dialog.show();
 	spike_num = Dialog.getNumber();
 	persis = Dialog.getNumber();
