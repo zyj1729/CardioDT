@@ -209,6 +209,19 @@ macro "workStage" {
 		satisfaction = Dialog.getCheckbox();
 		animation = Dialog.getCheckbox();
 	}
+
+	
+	Dialog.create("ROI Correction");
+	Dialog.addNumber("spike nums", 2, 0, 5, "");
+	Dialog.addNumber("spike persistance", 8, 0, 5, "slides");
+	Dialog.addNumber("adjacent spikes gap >= ", 20, 0, 5, "slides");
+	Dialog.addCheckbox("Exact spike num? (uncheck: >=)", false);
+	Dialog.show();
+	spike_num = Dialog.getNumber();
+	persis = Dialog.getNumber();
+	spike_gap = Dialog.getNumber();
+	exact = Dialog.getCheckbox();
+
 	
 	repC = 0;
 	start = 0;
@@ -231,8 +244,8 @@ macro "workStage" {
 			final = l;
 		}
 	}
-	// Draw arrows. 
-	run("Duplicate...", "title=Stage duplicate");
+//	// Draw arrows. 
+//	run("Duplicate...", "title=Stage duplicate");
 
 	numRoi = newArray(lines.length);
 	slide = newArray(lines.length);
@@ -240,7 +253,8 @@ macro "workStage" {
 	y = newArray(lines.length);
 
 	if (animation == true) {
-		a = 4;
+		a = 4; 
+		run("Duplicate...", "title=Stage duplicate");
 		selectWindow("Stage");
 		min_square_mov = 0;
 		for (i = 1; i < lines.length; i++ ) {
@@ -264,7 +278,6 @@ macro "workStage" {
 	roiManager("Deselect");
 	roiManager("Measure");
 	
-	
 	for (i = 1; i < lines.length; i++ ) {
 		if (i < sliceCount) {
 			setResult("Slice Number", i - 1, i + 1);
@@ -281,15 +294,43 @@ macro "workStage" {
 			dir = getDirection(parseFloat(currL[2]), parseFloat(currL[3]), parseFloat(nextL[2]), parseFloat(nextL[3]), parseFloat(lastL[2]), parseFloat(lastL[3]), parseFloat(currL[2]), parseFloat(currL[3]));
 			bright = getPixel(lastL[2], lastL[3]);
 			setResult("pixel_value_" + currL[0], lastL[1], bright);
-			setResult("Start X_" + currL[0], lastL[1], lastL[2]);
-			setResult("Start Y_" + currL[0], lastL[1], lastL[3]);
-			setResult("End X_" + currL[0], lastL[1], currL[2]);
-			setResult("End Y_" + currL[0], lastL[1], currL[3]);
-			setResult("Movement Length_" + currL[0], lastL[1], sqrt(pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2)));
-			setResult("Direction Change_" + currL[0] + " (degree)", lastL[1], dir);
+			setResult("start_x_" + currL[0], lastL[1], lastL[2]);
+			setResult("start_y_" + currL[0], lastL[1], lastL[3]);
+			setResult("end_x_" + currL[0], lastL[1], currL[2]);
+			setResult("end_y_" + currL[0], lastL[1], currL[3]);
+			setResult("movement_length_" + currL[0], lastL[1], sqrt(pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2)));
+			setResult("direction_change_" + currL[0] + "_degree", lastL[1], dir);
 		}
 	}
 
+	heads = Table.headings;
+	heads = split(heads, "	");
+	selected = newArray(0);
+	tt = 0;
+	for (i = 0; i < heads.length; i++) {
+		sep = split(heads[i], "_");
+		if (sep[0] == "pixel") {
+			data = Table.getColumn(heads[i]);
+			data = filterExtreme(data, 0);
+			Array.getStatistics(data, min, max, mean, stdDev);
+			std_data = newArray(data.length);
+			for (j = 0; j < std_data.length; j++) {
+				std_data[j] = (data[j] - mean) / stdDev;
+			}
+//			The ROI satisfied the spike_filter will be marked * in the begining.
+			if (spike_filter(std_data, spike_num, persis, spike_gap, exact) == true) {
+				selected = Array.concat(selected, sep[2]);
+				Table.renameColumn("pixel_value_" + sep[2], "*pixel_value_" + sep[2]);
+				Table.renameColumn("start_x_" + sep[2], "*start_x_" + sep[2]);
+				Table.renameColumn("start_y_" + sep[2], "*start_y_" + sep[2]);
+				Table.renameColumn("end_x_" + sep[2], "*end_x_" + sep[2]);
+				Table.renameColumn("end_y_" + sep[2], "*end_y_" + sep[2]);
+				Table.renameColumn("movement_length_" + sep[2], "*movement_length_" + sep[2]);
+				Table.renameColumn("direction_change_" + sep[2] + "_degree", "*direction_change_" + sep[2] + "_degree");
+			}
+		}
+		tt++;
+	}
 	Dialog.create("Want to save the results?");
 	Dialog.addCheckbox("Save the result table as excel?", 0);
 	Dialog.addCheckbox("Save the arrows animation?", 0);
@@ -312,8 +353,14 @@ macro "workStage" {
 		}
 		selectImage(originId);
 		temp = getInfo("image.filename");
-		wholeName = split(temp, ".");
-		imageName = wholeName[0];
+		if (temp == "") {
+			imageName = "untitled";
+		} else {
+			wholeName = split(temp, ".");
+			imageName = wholeName[0];
+		}
+		
+		
 		run("Read and Write Excel", "file=[" + folder + "results/excel_data/" + imageName + "_data.xlsx]");
 	}
 	if (arrowB == 1) {
@@ -337,30 +384,11 @@ macro "workStage" {
 		selectWindow("Stage");
 		saveAs("Tiff", folder + "results/arrows_animations/" + imageName + "_stage");
 	}
+
 	
-	heads = Table.headings;
-	heads = split(heads, "	");
-	selected = newArray(0);
-	tt = 0;
-	for (i = 0; i < heads.length; i++) {
-		sep = split(heads[i], "_");
-		if (sep[0] == "pixel") {
-			data = Table.getColumn(heads[i]);
-			data = filterExtreme(data, 0);
-			Array.getStatistics(data, min, max, mean, stdDev);
-			std_data = newArray(data.length);
-			for (j = 0; j < std_data.length; j++) {
-				std_data[j] = (data[j] - mean) / stdDev;
-			}
-			if (spike_filter(std_data, 2, 8, 20, false) == true) {
-				selected = Array.concat(selected, sep[2]);
-			}
-		}
-		tt++;
-	}
 	ranges = newArray(selected.length);
 	for (z = 0; z < selected.length; z++) {
-		data = Table.getColumn("Movement Length_" + selected[z]);
+		data = Table.getColumn("*movement_length_" + selected[z]);
 		Array.getStatistics(data, min, max, mean, stdDev);
 		range = max - min;
 		ranges[z] = range;
@@ -374,7 +402,7 @@ macro "workStage" {
 	IJ.renameResults("output_data");
 	ranges = Array.sort(ranges);
 	start = 0;
-	cap = floor(ranges.length * (1 / ll));
+	cap = round(ranges.length * (1 / ll));
 	mins = newArray(ll);
 	maxs = newArray(ll);
 	means = newArray(ll);
