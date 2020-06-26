@@ -43,7 +43,7 @@
 
 ![workflow](setup_flow10.png)
 
-- Input the spike filtering parameters. **spike nums** specifies the expected number of spikes. **spike persistance** specifies the least number of slides persistance required to be considered as a spike. **adjacent spikes gap** specifies the least number of slides between two adjacent spikes. **exact spike num** is checked if the expected number of spikes is exactly the one you input; it is unchecked if the expected number of spikes is at least the one you input.
+- Input the spike filtering parameters. ***spike nums*** specifies the expected number of spikes. ***spike persistance*** specifies the least number of slides persistance required to be considered as a spike. ***adjacent spikes gap*** specifies the least number of slides between two adjacent spikes. ***exact spike num*** is checked if the expected number of spikes is exactly the one you input; it is unchecked if the expected number of spikes is at least the one you input.
 
 ![workflow](setup_flow13.png)
 
