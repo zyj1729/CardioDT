@@ -213,7 +213,7 @@ macro "workStage" {
 	
 	Dialog.create("ROI Correction");
 	Dialog.addNumber("spike nums", 2, 0, 5, "");
-	Dialog.addNumber("spike persistance", 8, 0, 5, "slides");
+	Dialog.addNumber("spike persistence", 8, 0, 5, "slides");
 	Dialog.addNumber("adjacent spikes gap", 20, 0, 5, "slides");
 	Dialog.addCheckbox("exact spike num (uncheck: >=)", false);
 	Dialog.show();
@@ -331,7 +331,7 @@ macro "workStage" {
 		}
 		tt++;
 	}
-	Dialog.create("Want to save the results?");
+	Dialog.create("Save Result");
 	Dialog.addCheckbox("Save the result table as excel?", 0);
 	Dialog.addCheckbox("Save the arrows animation?", 0);
 	Dialog.show();
@@ -395,6 +395,7 @@ macro "workStage" {
 	}
 	
 	Dialog.create("Move Length Separation");
+	Dialog.addMessage(ranges.length + " ROIs left after spike filtering");
 	Dialog.addSlider("Number of layers: ", 0, 10, 3);
 	Dialog.show();
 	ll = Dialog.getNumber();
