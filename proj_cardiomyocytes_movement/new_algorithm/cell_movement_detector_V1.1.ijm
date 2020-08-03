@@ -152,6 +152,7 @@ var lines;
 var folder;
 var animation;
 macro "workStage" {
+	run("8-bit");
 //	setOption("Min & max gray value", true);
 	setOption("mean", true);
 	setOption("Std", true);
@@ -409,11 +410,12 @@ macro "workStage" {
 	means = newArray(ll);
 	stds = newArray(ll);
 	nums = newArray(ll);
+	ini = ranges.length % (ll - 1);
 	for (i = 0; i < ll; i++) {
-		if (i != ll - 1) {
-			curr = 	Array.slice(ranges, start, start + cap);
+		if (i == 0) {
+			curr = 	Array.slice(ranges, start, start + ini);
 		} else {
-			curr = 	Array.slice(ranges, start, ranges.length);
+			curr = 	Array.slice(ranges, start, start + cap);
 		}
 		Array.getStatistics(curr, min, max, mean, stdDev);
 		mins[i] = min;
@@ -421,7 +423,11 @@ macro "workStage" {
 		means[i] = mean;
 		stds[i] = stdDev;
 		nums[i] = curr.length;
-		start = start + cap;
+		if (i == 0) {
+			start = start + ini;	
+		} else {
+			start = start + cap;
+		}
 	}
 	
 	Table.create("Movement_Layers");
