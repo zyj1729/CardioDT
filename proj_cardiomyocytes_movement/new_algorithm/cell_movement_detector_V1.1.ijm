@@ -146,6 +146,15 @@ function filterExtreme(l, v) {
 	return result;
 }
 
+// Check whether the ROI is on the border. If so, it is highly possible to be an outlier. 
+function isBorder(xx, yy, width, height, ratio) {
+	if (xx < width * ratio || xx > width * (1 - ratio) || yy < height * ratio || yy > height * (1 - ratio)) {
+		return true	
+	}
+	return false
+}
+
+
 // A preview window to let users decide if the number of ROIs is acceptable. 
 var f;
 var lines;
@@ -156,6 +165,7 @@ macro "workStage" {
 //	setOption("Min & max gray value", true);
 	setOption("mean", true);
 	setOption("Std", true);
+	run("Set Measurements...", "mean standard min centroid redirect=None decimal=3");
 	folder = getDirectory("Choose a Directory");
 	File.saveString(folder, currentFolder + "Working_Directory.txt");
 	isMp = File.isDirectory(folder + "medium_products/");
@@ -223,7 +233,7 @@ macro "workStage" {
 	spike_gap = Dialog.getNumber();
 	exact = Dialog.getCheckbox();
 
-	
+	// Filter out ROIs based on present slides number. 
 	repC = 0;
 	start = 0;
 	final = 0;
@@ -245,8 +255,54 @@ macro "workStage" {
 			final = l;
 		}
 	}
-//	// Draw arrows. 
-//	run("Duplicate...", "title=Stage duplicate");
+
+	// FIlter out ROIs based on input spike parameters.	
+	start = 0;
+	final = 0;
+	const = "0";
+	pv = newArray(0);
+	for (l = 0; l < lines.length; l++) {
+		if (l != (lines.length - 1) && mark[l] == 1) {
+			continue;
+		} else {
+			if (l != (lines.length - 1)) {
+				line = split(lines[l], " ");
+			} else {
+				line[0] = "bound";
+				final = l;
+			}
+			if (line[0] == const) { 
+				pv = Array.concat(pv, getPixel(line[2], line[3]));
+				final = l;
+			} else {
+				if (pv.length != 0) {
+					Array.getStatistics(pv, min, max, mean, stdDev);
+					std_pv = newArray(pv.length);
+					for (j = 0; j < std_pv.length; j++) {
+						std_pv[j] = (pv[j] - mean) / stdDev;
+					}
+					if (spike_filter(std_pv, spike_num, persis, spike_gap, exact) == false) {
+						for (tt = start; tt <= final; tt++) {
+							mark[tt] = 1;
+						}
+					}
+				}
+				pv = newArray(1);
+				pv[0] = parseInt(line[2]);	
+				const = line[0];
+				start = l;
+				final = l;
+			}
+		}
+	}
+
+	rr = 0.03;
+	for (l = 0; l < lines.length; l++) {
+		line = split(lines[l], " ");
+		if (isBorder(parseInt(line[2]), parseInt(line[3]), width, height, rr) == true) {
+			mark[l] = 1;
+		}
+	}
 
 	numRoi = newArray(lines.length);
 	slide = newArray(lines.length);
@@ -254,10 +310,10 @@ macro "workStage" {
 	y = newArray(lines.length);
 
 	if (animation == true) {
-		a = 4; 
+		a = 10; 
 		run("Duplicate...", "title=Stage duplicate");
 		selectWindow("Stage");
-		min_square_mov = 0;
+		min_square_mov = 4;
 		for (i = 1; i < lines.length; i++ ) {
 			if (mark[i] == 1) {
 				continue;	
@@ -270,6 +326,7 @@ macro "workStage" {
 				run("Arrow Tool...", "width=1 size=4 color=Green style=Open");	
 				Roi.setStrokeColor("green");
 				run("Add Selection...");	
+				close("Exception");
 			} 
 			
 		}
@@ -404,13 +461,13 @@ macro "workStage" {
 	IJ.renameResults("output_data");
 	ranges = Array.sort(ranges);
 	start = 0;
-	cap = round(ranges.length * (1 / ll));
+	cap = floor(ranges.length * (1 / ll) + 1);
 	mins = newArray(ll);
 	maxs = newArray(ll);
 	means = newArray(ll);
 	stds = newArray(ll);
 	nums = newArray(ll);
-	ini = ranges.length % (ll - 1);
+	ini = ranges.length % cap;
 	for (i = 0; i < ll; i++) {
 		if (i == 0) {
 			curr = 	Array.slice(ranges, start, start + ini);
