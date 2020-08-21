@@ -47,42 +47,42 @@ function preview() {
 	}
 	
 	roiManager("Deselect");
-	roiManager("Measure");
-	count = nResults;
-	std = Table.getColumn("StdDev");
-	Array.getStatistics(std, min, max, mean, stdDev);
-	limit = mean / 2;
-	j = 0;
-	del_x = newArray(0);
-	del_y = newArray(0);
-	for (i = 0; i < count; i++) {
-		if (Table.get("StdDev", i) <= limit) {
-			del_x = Array.concat(del_x, Table.get("X", i));
-			del_y = Array.concat(del_y, Table.get("Y", i));
-			roiManager("select", j);
-			roiManager("delete");
-			j = j - 1;
-		}
-		j = j + 1;
-	}
-	close("Results");
-	to_del = -1;
-	for (l = 0; l < lines.length; l++) {
-		line = split(lines[l], " ");
-		if (line[0] == to_del) {
-			mark[l] = 1;
-			continue;	
-		}
-		for (k = 0; k < del_x.length; k++) {
-			if (parseInt(line[2]) == del_x[k] && parseInt(line[3]) == del_y[k]) {
-//				print(parseInt(line[2]), del_x[k]);
-				mark[l] = 1;
-				markCount++;
-				to_del = line[0];
-				break;
-			}
-		}
-	}
+//	roiManager("Measure");
+//	count = nResults;
+//	std = Table.getColumn("StdDev");
+//	Array.getStatistics(std, min, max, mean, stdDev);
+//	limit = mean / 2;
+//	j = 0;
+//	del_x = newArray(0);
+//	del_y = newArray(0);
+//	for (i = 0; i < count; i++) {
+//		if (Table.get("StdDev", i) <= limit) {
+//			del_x = Array.concat(del_x, Table.get("X", i));
+//			del_y = Array.concat(del_y, Table.get("Y", i));
+//			roiManager("select", j);
+//			roiManager("delete");
+//			j = j - 1;
+//		}
+//		j = j + 1;
+//	}
+//	close("Results");
+//	to_del = -1;
+//	for (l = 0; l < lines.length; l++) {
+//		line = split(lines[l], " ");
+//		if (line[0] == to_del) {
+//			mark[l] = 1;
+//			continue;	
+//		}
+//		for (k = 0; k < del_x.length; k++) {
+//			if (parseInt(line[2]) == del_x[k] && parseInt(line[3]) == del_y[k]) {
+////				print(parseInt(line[2]), del_x[k]);
+//				mark[l] = 1;
+//				markCount++;
+//				to_del = line[0];
+//				break;
+//			}
+//		}
+//	}
 	
  
 	roiManager("Show All");
@@ -184,7 +184,7 @@ macro "workStage" {
 		sliceCount = frames;	
 	}
 	var ovalRadius = 0;
-	refRadius = 10;
+	refRadius = 11;
 	refWidth = 1000;
 	refHeight = 700;
 	ovalRadius = round(sqrt(pow(refRadius, 2) * ((width * height) / (refWidth * refHeight))));
@@ -310,7 +310,7 @@ macro "workStage" {
 	y = newArray(lines.length);
 
 	if (animation == true) {
-		a = 10; 
+		a = 6; 
 		run("Duplicate...", "title=Stage duplicate");
 		selectWindow("Stage");
 		min_square_mov = 4;

@@ -10,7 +10,7 @@ double radius = fileContent.toDouble()
 filename = "raw_movement_data"
 double linkingMax = 15.0
 frameGap = 2
-double closingMax = 2
+double closingMax = 15
 
 import javax.swing.*
 import fiji.plugin.trackmate.Model
