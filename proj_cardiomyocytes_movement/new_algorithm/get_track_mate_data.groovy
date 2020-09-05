@@ -8,7 +8,7 @@ File radiusFile = new File(outputFolder + "approx_roi_radius.txt")
 String fileContent = radiusFile.text
 double radius = fileContent.toDouble()
 filename = "raw_movement_data"
-double linkingMax = 15.0
+double linkingMax = 5.0
 frameGap = 2
 double closingMax = 15
 

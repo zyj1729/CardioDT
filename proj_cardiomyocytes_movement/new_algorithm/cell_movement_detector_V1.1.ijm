@@ -45,7 +45,7 @@ function preview() {
 			roiManager("add");
 		}
 	}
-	
+
 	roiManager("Deselect");
 //	roiManager("Measure");
 //	count = nResults;
@@ -188,6 +188,10 @@ macro "workStage" {
 	refWidth = 1000;
 	refHeight = 700;
 	ovalRadius = round(sqrt(pow(refRadius, 2) * ((width * height) / (refWidth * refHeight))));
+	Dialog.create("ROI Size");
+	Dialog.addNumber("ROI Radius:", ovalRadius);
+	Dialog.show();
+	ovalRadius = Dialog.getNumber();
 	File.saveString(d2s(ovalRadius, 0), folder + "medium_products/approx_roi_radius.txt");
 	
 	// Get the ROI track mate data by calling 2 functions. 
@@ -196,7 +200,6 @@ macro "workStage" {
 	run("roi xml to txt");
 	f = File.openAsString(folder + "medium_products/sorted_roi.txt");
 	lines = split(f, "\n");
-
 	
 	satisfaction = false;
 	time = 0;
@@ -310,17 +313,25 @@ macro "workStage" {
 	y = newArray(lines.length);
 
 	if (animation == true) {
-		a = 6; 
+		Dialog.create("Arrow Animation Settings");
+		Dialog.addNumber("Arrow length *", 6);
+		Dialog.addNumber("Minimum movement length:", 0);
+		Dialog.addNumber("Maximum movement length:", 4);
+		Dialog.show();
+		
+		a = Dialog.getNumber();
+		min_square_mov = Dialog.getNumber();
+		max_square_mov = Dialog.getNumber();
 		run("Duplicate...", "title=Stage duplicate");
 		selectWindow("Stage");
-		min_square_mov = 4;
+		
 		for (i = 1; i < lines.length; i++ ) {
 			if (mark[i] == 1) {
 				continue;	
 			}
 			lastL = split(lines[i - 1], " ");
 			currL = split(lines[i], " ");
-			if (lastL[0] == currL[0] && pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2) > min_square_mov) {
+			if (lastL[0] == currL[0] && pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2) > min_square_mov && lastL[0] == currL[0] && pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2) < max_square_mov) {
 				setSlice(currL[1] + 1);
 				makeArrow(round(lastL[2]), round(lastL[3]), round(lastL[2]) + a * (round(currL[2]) - round(lastL[2])), round(lastL[3]) + a * (round(currL[3]) - round(lastL[3])), "filled");
 				run("Arrow Tool...", "width=1 size=4 color=Green style=Open");	
