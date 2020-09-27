@@ -198,6 +198,7 @@ macro "workStage" {
 	originId = getImageID();
 	run("get track mate data");
 	run("roi xml to txt");
+	run("movement smoother");
 	f = File.openAsString(folder + "medium_products/sorted_roi.txt");
 	lines = split(f, "\n");
 	
@@ -317,13 +318,28 @@ macro "workStage" {
 		Dialog.addNumber("Arrow length *", 6);
 		Dialog.addNumber("Minimum movement length:", 0);
 		Dialog.addNumber("Maximum movement length:", 4);
+		arrow_types = newArray(2);
+		arrow_types[0] = "Between frames";
+		arrow_types[1] = "Still start";
+		Dialog.addRadioButtonGroup("Arrow type", arrow_types, 2, 1, "Between frames");
 		Dialog.show();
 		
 		a = Dialog.getNumber();
-		min_square_mov = Dialog.getNumber();
-		max_square_mov = Dialog.getNumber();
+		min_square_mov = pow(Dialog.getNumber(), 2);
+		max_square_mov = pow(Dialog.getNumber(), 2);
+		a_t = Dialog.getRadioButton();
 		run("Duplicate...", "title=Stage duplicate");
 		selectWindow("Stage");
+
+		if (a_t == "Still start") {
+			for (i = 1; i < lines.length; i++ ) {
+				if (mark[i] == 1) {
+					continue;	
+				}
+				reference = split(lines[i], " ");
+				break;
+			}
+		}
 		
 		for (i = 1; i < lines.length; i++ ) {
 			if (mark[i] == 1) {
@@ -331,14 +347,25 @@ macro "workStage" {
 			}
 			lastL = split(lines[i - 1], " ");
 			currL = split(lines[i], " ");
+			
 			if (lastL[0] == currL[0] && pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2) > min_square_mov && lastL[0] == currL[0] && pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2) < max_square_mov) {
 				setSlice(currL[1] + 1);
-				makeArrow(round(lastL[2]), round(lastL[3]), round(lastL[2]) + a * (round(currL[2]) - round(lastL[2])), round(lastL[3]) + a * (round(currL[3]) - round(lastL[3])), "filled");
+				if (a_t == "Still start") {
+					if (pow(currL[2] - reference[2], 2) + pow(currL[3] - reference[3], 2) > max_square_mov){
+						reference = currL;
+						continue;	
+					}
+					makeArrow(round(reference[2]), round(reference[3]), round(reference[2]) + a * (round(currL[2]) - round(reference[2])), round(reference[3]) + a * (round(currL[3]) - round(reference[3])), "filled");
+				} else if (a_t == "Between frames") {
+					makeArrow(round(lastL[2]), round(lastL[3]), round(lastL[2]) + a * (round(currL[2]) - round(lastL[2])), round(lastL[3]) + a * (round(currL[3]) - round(lastL[3])), "filled");
+				}
 				run("Arrow Tool...", "width=1 size=4 color=Green style=Open");	
 				Roi.setStrokeColor("green");
 				run("Add Selection...");	
 				close("Exception");
-			} 
+			} else if (lastL[0] != currL[0] && a_t == "Still start") {
+				reference = currL;
+			}
 			
 		}
 	}
@@ -538,8 +565,8 @@ function getDirection(oriX, oriY, desX, desY, formOriX, formOriY, formDesX, form
 	
 	b2 = oriY - k2 * oriX;
 	
-	constant = (1 - k1 * k2) / (k1 + k2);
-	bisecK = sqrt(1 + pow(constant, 2)) - constant;
+//	constant = (1 - k1 * k2) / (k1 + k2);
+//	bisecK = sqrt(1 + pow(constant, 2)) - constant;
 
 	formDist = sqrt(pow(formDesX - formOriX, 2) + pow(formDesY - formOriY, 2));
 	currDist = sqrt(pow(desX - oriX, 2) + pow(desY - oriY, 2));
@@ -557,7 +584,7 @@ function getDirection(oriX, oriY, desX, desY, formOriX, formOriY, formDesX, form
 		} else {
 			return -degree;	
 		}
-	} else if (deltaY < 0) {
+	} else if (deltaX < 0) {
 		if (desY >= desX * k1 + b1) {
 			return degree;	
 		} else {
