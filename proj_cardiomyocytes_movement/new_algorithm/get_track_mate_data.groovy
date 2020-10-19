@@ -12,6 +12,8 @@ double linkingMax = 5.0
 frameGap = 2
 double closingMax = 15
 
+import ij.*
+import ij.gui.Roi
 import javax.swing.*
 import fiji.plugin.trackmate.Model
 import fiji.plugin.trackmate.Settings
@@ -40,7 +42,14 @@ if (dims[4] == 1) {
 // Setup settings for TrackMate
 settings = new Settings()
 settings.setFrom(imp)
+Roi roi = new Roi(325, 475, 130, 105)
+settings.roi = roi
 settings.dt = 0.05
+//settings.roi.x = 325
+//settings.roi.y = 475
+//settings.roi.width = 130
+//settings.roi.height = 105
+
 
 settings.detectorFactory = new LogDetectorFactory()
 settings.detectorSettings = settings.detectorFactory.getDefaultSettings()

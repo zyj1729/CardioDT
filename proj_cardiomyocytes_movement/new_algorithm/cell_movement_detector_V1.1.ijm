@@ -29,6 +29,15 @@ function preview() {
 	lines = split(f, "\n");
 	filter255(lines);
 	setSlice(1);
+
+	rr = 0.03;
+	for (l = 0; l < lines.length; l++) {
+		line = split(lines[l], " ");
+		if (isBorder(parseInt(line[2]), parseInt(line[3]), width, height, rr) == true) {
+			mark[l] = 1;
+		}
+	}
+	
 	// draw all the selected roi in the first slice as a preview. 
 	for (sInd = 0; sInd < lines.length; sInd++) {
 		if (mark[sInd] == 1) {
@@ -47,6 +56,29 @@ function preview() {
 	}
 
 	roiManager("Deselect");
+	
+//	rr = 0.03;
+//	for (l = 0; l < lines.length; l++) {
+//		line = split(lines[l], " ");
+//		if (isBorder(parseInt(line[2]), parseInt(line[3]), width, height, rr) == true) {
+//			mark[l] = 1;
+//		}
+//	}
+//	
+//	count = nResults;
+//	for (i = 0; i < count; i++) {
+//		if (mark[i] == 1) {
+//			del_x = Array.concat(del_x, Table.get("X", i));
+//			del_y = Array.concat(del_y, Table.get("Y", i));
+//			roiManager("select", j);
+//			roiManager("delete");
+//			j = j - 1;
+//		}
+//		j = j + 1;
+//	}
+//	close("Results");
+
+
 //	roiManager("Measure");
 //	count = nResults;
 //	std = Table.getColumn("StdDev");
@@ -96,43 +128,43 @@ function preview() {
 // persistance: How long does the standardized spike has to continuously exceed 1 to be considered as a spike. 
 // shortest_gap: The shortest distance between adjacent spikes.
 // exact: boolean value. If true observed spike num == spike_num. If false, observed spike num >= spike_num.
-function spike_filter(data, spike_num, persistance, shortest_gap, exact) {
-	count = 0;
-    temp_c = 0;
-    escape = false;
-    start = -1;
-//    for i in range(len(data)):
-	for (i = 0; i < data.length; i++){
-//		print(escape);
-        if (data[i] > 1 && !escape){
-            temp_c++;
-        } else {
-            temp_c = 0;
-        }
-        if (start != -1 && (i - start) >= shortest_gap) {
-            escape = false;
-            start = -1;
-        }
-        if (temp_c >= persistance && !escape) {
-            count++;
-            escape = true;
-            temp_c = 0;
-        }
-        if (escape && start == -1 && data[i] < 1){
-            start = i;
-        }
-	}
-    if (exact == true) {
-	    if (spike_num == count){
-	        return true;
-	    }
-    } else {
-        if (spike_num <= count){
-            return true;
-        }
-    }
-    return false;
-}
+//function spike_filter(data, spike_num, persistance, shortest_gap, exact) {
+//	count = 0;
+//    temp_c = 0;
+//    escape = false;
+//    start = -1;
+////    for i in range(len(data)):
+//	for (i = 0; i < data.length; i++){
+////		print(escape);
+//        if (data[i] > 1 && !escape){
+//            temp_c++;
+//        } else {
+//            temp_c = 0;
+//        }
+//        if (start != -1 && (i - start) >= shortest_gap) {
+//            escape = false;
+//            start = -1;
+//        }
+//        if (temp_c >= persistance && !escape) {
+//            count++;
+//            escape = true;
+//            temp_c = 0;
+//        }
+//        if (escape && start == -1 && data[i] < 1){
+//            start = i;
+//        }
+//	}
+//    if (exact == true) {
+//	    if (spike_num == count){
+//	        return true;
+//	    }
+//    } else {
+//        if (spike_num <= count){
+//            return true;
+//        }
+//    }
+//    return false;
+//}
 
 
 // Filter out v value in the list l.
@@ -152,6 +184,15 @@ function isBorder(xx, yy, width, height, ratio) {
 		return true	
 	}
 	return false
+}
+
+// Return a magnifier for arrow length. 
+function dynamic_magnifier(x, base) {
+	if (x >= 0) {
+		return base * (1 - 0.8 * pow(PI, -1.5 * x))
+	} else {
+		return - base * (1 - 0.8 * pow(PI, -1.5 * abs(x)))	
+	}
 }
 
 
@@ -212,6 +253,7 @@ macro "workStage" {
 		if (time != 0) {
 			run("get track mate data");
 			run("roi xml to txt");
+			run("movement smoother");
 			roiManager("reset");
 		}
 		time++;
@@ -226,16 +268,16 @@ macro "workStage" {
 	}
 
 	
-	Dialog.create("ROI Correction");
-	Dialog.addNumber("spike nums", 0, 0, 5, "");
-	Dialog.addNumber("spike persistence", 8, 0, 5, "slides");
-	Dialog.addNumber("adjacent spikes gap", 20, 0, 5, "slides");
-	Dialog.addCheckbox("exact spike num (uncheck: >=)", false);
-	Dialog.show();
-	spike_num = Dialog.getNumber();
-	persis = Dialog.getNumber();
-	spike_gap = Dialog.getNumber();
-	exact = Dialog.getCheckbox();
+//	Dialog.create("ROI Correction");
+//	Dialog.addNumber("spike nums", 0, 0, 5, "");
+//	Dialog.addNumber("spike persistence", 8, 0, 5, "slides");
+//	Dialog.addNumber("adjacent spikes gap", 20, 0, 5, "slides");
+//	Dialog.addCheckbox("exact spike num (uncheck: >=)", false);
+//	Dialog.show();
+//	spike_num = Dialog.getNumber();
+//	persis = Dialog.getNumber();
+//	spike_gap = Dialog.getNumber();
+//	exact = Dialog.getCheckbox();
 
 	// Filter out ROIs based on present slides number. 
 	repC = 0;
@@ -261,52 +303,44 @@ macro "workStage" {
 	}
 
 	// FIlter out ROIs based on input spike parameters.	
-	start = 0;
-	final = 0;
-	const = "0";
-	pv = newArray(0);
-	for (l = 0; l < lines.length; l++) {
-		if (l != (lines.length - 1) && mark[l] == 1) {
-			continue;
-		} else {
-			if (l != (lines.length - 1)) {
-				line = split(lines[l], " ");
-			} else {
-				line[0] = "bound";
-				final = l;
-			}
-			if (line[0] == const) { 
-				pv = Array.concat(pv, getPixel(line[2], line[3]));
-				final = l;
-			} else {
-				if (pv.length != 0) {
-					Array.getStatistics(pv, min, max, mean, stdDev);
-					std_pv = newArray(pv.length);
-					for (j = 0; j < std_pv.length; j++) {
-						std_pv[j] = (pv[j] - mean) / stdDev;
-					}
-					if (spike_filter(std_pv, spike_num, persis, spike_gap, exact) == false) {
-						for (tt = start; tt <= final; tt++) {
-							mark[tt] = 1;
-						}
-					}
-				}
-				pv = newArray(1);
-				pv[0] = parseInt(line[2]);	
-				const = line[0];
-				start = l;
-				final = l;
-			}
-		}
-	}
-
-	rr = 0.03;
-	for (l = 0; l < lines.length; l++) {
-		line = split(lines[l], " ");
-		if (isBorder(parseInt(line[2]), parseInt(line[3]), width, height, rr) == true) {
-			mark[l] = 1;
-		}
-	}
+//	start = 0;
+//	final = 0;
+//	const = "0";
+//	pv = newArray(0);
+//	for (l = 0; l < lines.length; l++) {
+//		if (l != (lines.length - 1) && mark[l] == 1) {
+//			continue;
+//		} else {
+//			if (l != (lines.length - 1)) {
+//				line = split(lines[l], " ");
+//			} else {
+//				line[0] = "bound";
+//				final = l;
+//			}
+//			if (line[0] == const) { 
+//				pv = Array.concat(pv, getPixel(line[2], line[3]));
+//				final = l;
+//			} else {
+//				if (pv.length != 0) {
+//					Array.getStatistics(pv, min, max, mean, stdDev);
+//					std_pv = newArray(pv.length);
+//					for (j = 0; j < std_pv.length; j++) {
+//						std_pv[j] = (pv[j] - mean) / stdDev;
+//					}
+//					if (spike_filter(std_pv, spike_num, persis, spike_gap, exact) == false) {
+//						for (tt = start; tt <= final; tt++) {
+//							mark[tt] = 1;
+//						}
+//					}
+//				}
+//				pv = newArray(1);
+//				pv[0] = parseInt(line[2]);	
+//				const = line[0];
+//				start = l;
+//				final = l;
+//			}
+//		}
+//	}
 
 	numRoi = newArray(lines.length);
 	slide = newArray(lines.length);
@@ -315,8 +349,8 @@ macro "workStage" {
 
 	if (animation == true) {
 		Dialog.create("Arrow Animation Settings");
-		Dialog.addNumber("Arrow length *", 6);
-		Dialog.addNumber("Minimum movement length:", 0);
+		Dialog.addNumber("Arrow magnifier ", 15);
+		Dialog.addNumber("Minimum movement length:", 0.1);
 		Dialog.addNumber("Maximum movement length:", 4);
 		arrow_types = newArray(2);
 		arrow_types[0] = "Between frames";
@@ -324,7 +358,7 @@ macro "workStage" {
 		Dialog.addRadioButtonGroup("Arrow type", arrow_types, 2, 1, "Between frames");
 		Dialog.show();
 		
-		a = Dialog.getNumber();
+		base = Dialog.getNumber();
 		min_square_mov = pow(Dialog.getNumber(), 2);
 		max_square_mov = pow(Dialog.getNumber(), 2);
 		a_t = Dialog.getRadioButton();
@@ -355,9 +389,9 @@ macro "workStage" {
 						reference = currL;
 						continue;	
 					}
-					makeArrow(round(reference[2]), round(reference[3]), round(reference[2]) + a * (round(currL[2]) - round(reference[2])), round(reference[3]) + a * (round(currL[3]) - round(reference[3])), "filled");
+					makeArrow(round(reference[2]), round(reference[3]), round(parseFloat(reference[2]) + dynamic_magnifier(parseFloat(currL[2]) - parseFloat(reference[2]), base)), round(parseFloat(reference[3]) + dynamic_magnifier(parseFloat(currL[3]) - parseFloat(reference[3]), base)), "filled");
 				} else if (a_t == "Between frames") {
-					makeArrow(round(lastL[2]), round(lastL[3]), round(lastL[2]) + a * (round(currL[2]) - round(lastL[2])), round(lastL[3]) + a * (round(currL[3]) - round(lastL[3])), "filled");
+					makeArrow(round(lastL[2]), round(lastL[3]), round(parseFloat(lastL[2]) + dynamic_magnifier(parseFloat(currL[2]) - parseFloat(lastL[2]), base)), round(parseFloat(lastL[3]) + dynamic_magnifier(parseFloat(currL[3]) - parseFloat(lastL[3]), base)), "filled");
 				}
 				run("Arrow Tool...", "width=1 size=4 color=Green style=Open");	
 				Roi.setStrokeColor("green");
@@ -406,27 +440,29 @@ macro "workStage" {
 	for (i = 0; i < heads.length; i++) {
 		sep = split(heads[i], "_");
 		if (sep[0] == "pixel") {
-			data = Table.getColumn(heads[i]);
-			data = filterExtreme(data, 0);
-			Array.getStatistics(data, min, max, mean, stdDev);
-			std_data = newArray(data.length);
-			for (j = 0; j < std_data.length; j++) {
-				std_data[j] = (data[j] - mean) / stdDev;
-			}
+//			data = Table.getColumn(heads[i]);
+//			data = filterExtreme(data, 0);
+//			Array.getStatistics(data, min, max, mean, stdDev);
+//			std_data = newArray(data.length);
+//			for (j = 0; j < std_data.length; j++) {
+//				std_data[j] = (data[j] - mean) / stdDev;
+//			}
 //			The ROI satisfied the spike_filter will be marked * in the begining.
-			if (spike_filter(std_data, spike_num, persis, spike_gap, exact) == true) {
-				selected = Array.concat(selected, sep[2]);
-				Table.renameColumn("pixel_value_" + sep[2], "*pixel_value_" + sep[2]);
-				Table.renameColumn("start_x_" + sep[2], "*start_x_" + sep[2]);
-				Table.renameColumn("start_y_" + sep[2], "*start_y_" + sep[2]);
-				Table.renameColumn("end_x_" + sep[2], "*end_x_" + sep[2]);
-				Table.renameColumn("end_y_" + sep[2], "*end_y_" + sep[2]);
-				Table.renameColumn("movement_length_" + sep[2], "*movement_length_" + sep[2]);
-				Table.renameColumn("direction_change_" + sep[2] + "_degree", "*direction_change_" + sep[2] + "_degree");
-			}
+			selected = Array.concat(selected, sep[2]);
+//			if (spike_filter(std_data, spike_num, persis, spike_gap, exact) == true) {
+//				selected = Array.concat(selected, sep[2]);
+//				Table.renameColumn("pixel_value_" + sep[2], "*pixel_value_" + sep[2]);
+//				Table.renameColumn("start_x_" + sep[2], "*start_x_" + sep[2]);
+//				Table.renameColumn("start_y_" + sep[2], "*start_y_" + sep[2]);
+//				Table.renameColumn("end_x_" + sep[2], "*end_x_" + sep[2]);
+//				Table.renameColumn("end_y_" + sep[2], "*end_y_" + sep[2]);
+//				Table.renameColumn("movement_length_" + sep[2], "*movement_length_" + sep[2]);
+//				Table.renameColumn("direction_change_" + sep[2] + "_degree", "*direction_change_" + sep[2] + "_degree");
+//			}
 		}
 		tt++;
 	}
+
 	Dialog.create("Save Result");
 	Dialog.addCheckbox("Save the result table as excel?", 0);
 	Dialog.addCheckbox("Save the arrows animation?", 0);
@@ -484,7 +520,8 @@ macro "workStage" {
 	
 	ranges = newArray(selected.length);
 	for (z = 0; z < selected.length; z++) {
-		data = Table.getColumn("*movement_length_" + selected[z]);
+//		data = Table.getColumn("*movement_length_" + selected[z]);
+		data = Table.getColumn("movement_length_" + selected[z]);
 		Array.getStatistics(data, min, max, mean, stdDev);
 		range = max - min;
 		ranges[z] = range;
