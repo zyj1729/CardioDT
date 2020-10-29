@@ -1,4 +1,4 @@
-# Cell Movement Detector
+# CardioDT
 
 - This program is designed to detect and quantify the movements of cardiomyocytes in microscope videos. You need to have ImageJ and Fiji downloaded on your computer to use this program. 
 
