@@ -22,39 +22,96 @@ function filter255(array) {
 	}
 }
 
-
+var act_threshold;
 // A function to draw the ROIs in the first slice as preview. 
 function preview(con_th) {
 	f = File.openAsString(folder + "medium_products/sorted_roi.txt");
 	lines = split(f, "\n");
+	if (lines.length == 0) {
+		exit("No ROI detected. Please run again with looser parameters.");	
+	}
 	filter255(lines);
 	setSlice(1);
 
-	// Filter out border ROIs
-	rr = 0.03;
-	for (l = 0; l < lines.length; l++) {
-		line = split(lines[l], " ");
-		if (isBorder(parseInt(line[2]), parseInt(line[3]), width, height, rr) == true) {
-			mark[l] = 1;
-		}
-	}
-
-	// Filter out ROIs based on present slides number. 
+	// Filtering ROIs
 	repC = 0;
 	start = 0;
 	final = 0;
 	const = "0";
+	rr = 0.03;
+	maxConIncX = 0;
+	maxConDecX = 0;
+	pre = newArray();
+	tempIncX = 0;
+	tempDecX = 0;
+	maxConIncY = 0;
+	maxConDecY = 0;
+	tempIncY = 0;
+	tempDecY = 0;
 	for (l = 0; l < lines.length; l++) {
 		line = split(lines[l], " ");
+		
+		// Filter out border ROIs
+		if (isBorder(parseInt(line[2]), parseInt(line[3]), width, height, rr) == true) {
+			mark[l] = 1;
+		}
+
+		// Filter out ROIs based on present slides number and movement activity.
 		if (line[0] == const) {
 			repC++;
 			final = l;
+			if (pre.length != 0) {
+				if (parseFloat(line[2]) > parseFloat(pre[2])) {
+					tempDecX = 0;
+					tempIncX++;
+				} else if (parseFloat(line[2]) < parseFloat(pre[2])) {
+					tempIncX = 0;
+					tempDecX++;	
+				}
+				if (tempIncX > maxConIncX) {
+					maxConIncX = tempIncX;	
+				}
+				if (tempDecX > maxConDecX) {
+					maxConDecX = tempDecX;	
+				}
+				if (parseFloat(line[3]) > parseFloat(pre[3])) {
+					tempDecY = 0;
+					tempIncY++;
+				} else if (parseFloat(line[3]) < parseFloat(pre[3])) {
+					tempIncY = 0;
+					tempDecY++;	
+				}
+				if (tempIncY > maxConIncY) {
+					maxConIncY = tempIncY;	
+				}
+				if (tempDecY > maxConDecY) {
+					maxConDecY = tempDecY;	
+				}
+			}
+			pre = line;
 		} else {
+			// Filter out ROIs based on present slides number.
 			if (repC < con_th) {
 				for (tt = start; tt <= final; tt++) {
 					mark[tt] = 1;	
 				}
 			}
+
+			// Filter out ROIs based on movement activity.
+			if (maxConIncX < act_threshold && maxConIncY < act_threshold && maxConDecX < act_threshold && maxConDecY < act_threshold) {
+				for (tt = start; tt <= final; tt++) {
+					mark[tt] = 1;	
+				}
+			}
+			pre = "";
+			maxConIncX = 0;
+			maxConDecX = 0;
+			tempIncX = 0;
+			tempDecX = 0;
+			maxConIncY = 0;
+			maxConDecY = 0;
+			tempIncY = 0;
+			tempDecY = 0;
 			repC = 0;
 			const = line[0];
 			start = l;
@@ -110,20 +167,28 @@ function isBorder(xx, yy, width, height, ratio) {
 // Return a magnifier for arrow length. 
 function dynamic_magnifier(x, base) {
 	if (x >= 0) {
-		return base * (1 - 0.8 * pow(PI, -1.5 * x))
+		return base * (1 - 0.8 * pow(PI, -1 * x))
 	} else {
-		return - base * (1 - 0.8 * pow(PI, -1.5 * abs(x)))	
+		return - base * (1 - 0.8 * pow(PI, -1 * abs(x)))	
 	}
 }
 
-
-function filteredROICount(sorted_roi_list, mark_list) {
+// Can count the unique ROIs from trackmate sorted roi output. 
+// 		Set count_mode to true to count.
+// Can also be used to find the centers for all unique ROIs. 
+// 		Set count_mode to false and which_pattern to -1.
+// Can also calculate the change patterns of a certain ROI. 
+// 		Set count_mode to false and which_pattern to roi index.
+// Note: seems like macro function cannot return long string. So set global variable instead.
+var dyna_centers;
+var dyna_patterns;
+function filteredROICount(sorted_roi_list, mark_list, count_mode, which_pattern) {
 	if (sorted_roi_list.length != mark_list.length) {
 		exit("The roi list length doesn't equal to mark list length.");
 	}
 	count = 0;
 	for (i = 1; i < sorted_roi_list.length; i++) {
-		if (mark_list[i] == 1) {
+		if (mark_list[i - 1] == 1) {
 			continue;	
 		} 
 		last = split(sorted_roi_list[i - 1], " ");
@@ -131,8 +196,75 @@ function filteredROICount(sorted_roi_list, mark_list) {
 		if (last[0] != curr[0]) {
 			count++;
 		}
-	}	
-	return count
+	}
+	if (!count_mode) {
+		positions = newArray(count);
+		patterns = newArray();
+		last = newArray("-1");
+		curr = split(sorted_roi_list[0], " ");
+		index = -1;
+		for (i = 1; i < sorted_roi_list.length; i++) {
+			if (mark_list[i - 1] == 1) {
+				last = split(sorted_roi_list[i - 1], " ");
+				curr = split(sorted_roi_list[i], " ");
+				continue;	
+			} 
+			if (last[0] == curr[0] && which_pattern == index) {
+				dx = parseFloat(curr[2]) - parseFloat(last[2]);
+				dy = parseFloat(curr[3]) - parseFloat(last[3]);
+				frame = parseInt(curr[1]) - parseInt(last[1]);
+				patterns = Array.concat(patterns, d2s(frame, 0) + " " + d2s(dx, 5) + " " + d2s(dy, 5));
+			}
+			if (last[0] != curr[0]) {
+				x = curr[2];
+				y = curr[3];
+				index++;
+				for (j = 0; j < positions.length; j++) {
+					if (positions[j] == 0) {
+						positions[j] = d2s(x, 5) + " " + d2s(y, 5);
+						break;
+					}
+				}
+				
+			}
+			
+			last = split(sorted_roi_list[i - 1], " ");
+			curr = split(sorted_roi_list[i], " ");
+		}
+		if (which_pattern == -1) {
+			positions = String.join(positions, "\n");
+			dyna_centers = positions;
+			return positions
+		}
+		patterns = String.join(patterns, "\n");
+		dyna_patterns = patterns;
+		return patterns
+	} else {
+		return count	
+	}
+	
+}
+
+// Generate a Gaussian random position with an ROI given its center and radius. 
+function randomPosition(center, radius) {
+	rnX = random("Gaussian");
+	rnY = random("Gaussian");
+	newX = 0;
+	newY = 0;
+	temp = split(center, " ");
+	centerX = parseFloat(temp[0]);
+	centerY = parseFloat(temp[1]);
+	if (rnX >= 0) {
+		newX = centerX + radius * (1 - pow(PI, -1.5 * rnX));
+	} else {
+		newX = centerX - radius * (1 - pow(PI, 1.5 * rnX));
+	}
+	if (rnY >= 0) {
+		newY = centerY + radius * (1 - pow(PI, -1.5 * rnY));
+	} else {
+		newY = centerY - radius * (1 - pow(PI, 1.5 * rnY));
+	}
+	return d2s(newX, 5) + " " + d2s(newY, 5);
 }
 
 
@@ -165,12 +297,10 @@ macro "workStage" {
 		sliceCount = frames;	
 	}
 	var ovalRadius = 0;
-	refRadius = 11;
+	refRadius = 30;
 	refWidth = 1000;
 	refHeight = 700;
 	ovalRadius = round(sqrt(pow(refRadius, 2) * ((width * height) / (refWidth * refHeight))));
-
-
 	originId = getImageID();
 	satisfaction = false;
 	
@@ -179,18 +309,17 @@ macro "workStage" {
 		Dialog.create("ROI selection input");
 		Dialog.addMessage("What is your expected ROI radius?");
 		Dialog.addNumber("\t\t\t\t\t\t", ovalRadius, 0, 5, "pixels");
-		Dialog.addMessage("What is the minimum duration for a selected ROI?");
+		Dialog.addMessage("What is the minimum duration for a qualified ROI?");
 		Dialog.addSlider("\t\t\t\t\t\t", 0, sliceCount, sliceCount * 0.75);
-//		Dialog.addMessage("What is the quality threshold for ROI detection? (smaller threhsold generates more ROIs)");
-//		Dialog.addNumber("\t\t\t\t\t\t", 0, 1, 5, "");
+		Dialog.addMessage("What is the minimum continuous moving frames for a qualified ROI?");
+		Dialog.addNumber("\t\t\t\t\t\t", 5, 0, 5, "frames");
 		Dialog.show();
 		ovalRadius = Dialog.getNumber();
 		con_th = Dialog.getNumber();
-//		quality_th = Dialog.getNumber();
+		act_threshold = Dialog.getNumber();
 		File.saveString(d2s(ovalRadius, 0), folder + "medium_products/approx_roi_radius.txt");
-//		File.saveString(d2s(quality_th, 1), folder + "medium_products/quality_threshold.txt");
 		
-		// Get the ROI track mate data by calling 2 functions. 
+		// Get the ROI track mate data by calling 2 functions. Then smooth the movement data.  
 		selectImage(originId);
 		run("get track mate data");
 		run("roi xml to txt");
@@ -205,7 +334,9 @@ macro "workStage" {
 
 	f = File.openAsString(folder + "medium_products/sorted_roi.txt");
 	lines = split(f, "\n");
-	numRoi = filteredROICount(lines, mark);
+	count_mode = true;
+	which_pattern = -1;
+	numRoi = filteredROICount(lines, mark, count_mode, which_pattern);
 	
 	Dialog.create("Analysis parameters input");
 	Dialog.addRadioButtonGroup("\t Do you want to draw arrow animation?", newArray("Yes", "No"), 0, 2, "Yes");
@@ -220,12 +351,12 @@ macro "workStage" {
 	arrowB = Dialog.getCheckbox();
 	ll = Dialog.getNumber();
 
-
 	if (animation == "Yes") {
 		Dialog.create("Arrow Animation Settings");
-		Dialog.addNumber("Arrow magnifier ", 15);
+		Dialog.addNumber("Arrow magnifier ", 30);
 		Dialog.addNumber("Minimum movement length:", 0.1);
 		Dialog.addNumber("Maximum movement length:", 4);
+		Dialog.addNumber("Attachment ROI num:", 6);
 		arrow_types = newArray(2);
 		arrow_types[0] = "Between frames";
 		arrow_types[1] = "Still start";
@@ -235,10 +366,47 @@ macro "workStage" {
 		base = Dialog.getNumber();
 		min_square_mov = pow(Dialog.getNumber(), 2);
 		max_square_mov = pow(Dialog.getNumber(), 2);
+		attach_num = Dialog.getNumber();
 		a_t = Dialog.getRadioButton();
 		run("Duplicate...", "title=Stage duplicate");
 		selectWindow("Stage");
 
+		// Produce attachments ROIs
+		count_mode = false;
+		which_pattern = -1;
+		_ = filteredROICount(lines, mark, count_mode, which_pattern);
+		centers = split(dyna_centers, "\n");
+		attachments = newArray();
+		roi_ind = 0;
+		for (i = 0; i < centers.length; i++) {
+			which_pattern = i;
+			_ = filteredROICount(lines, mark, count_mode, which_pattern);
+			patterns = split(dyna_patterns, "\n");
+			for (j = 0; j < attach_num; j++) {
+				temp = randomPosition(centers[i], ovalRadius);
+				temp = split(temp, " ");
+				newX = parseFloat(temp[0]);
+				newY = parseFloat(temp[1]);
+				frame_ind = 0;
+				attachments = Array.concat(attachments, d2s(roi_ind, 0) + " " + d2s(frame_ind, 0) + " " + d2s(newX, 5) + " " + d2s(newY, 5));
+				for (p = 0; p < patterns.length; p++) {
+					tempP = split(patterns[p], " ");
+					pFrame = parseInt(tempP[0]);
+					pX = parseFloat(tempP[1]);
+					pY = parseFloat(tempP[2]);
+					frame_ind = frame_ind + pFrame;
+					newX = newX + pX;
+					newY = newY + pY;
+					attachments = Array.concat(attachments, d2s(roi_ind, 0) + " " + d2s(frame_ind, 0) + " " + d2s(newX, 5) + " " + d2s(newY, 5));
+				}
+				roi_ind++;
+			}
+		}
+		f = File.open(folder + "medium_products/attachment_ROIs.txt");
+		for (l = 0; l < attachments.length; l++) {
+			print(f, attachments[l] + "\n");	
+		}
+		
 		if (a_t == "Still start") {
 			for (i = 1; i < lines.length; i++ ) {
 				if (mark[i] == 1) {
@@ -274,7 +442,38 @@ macro "workStage" {
 			} else if (lastL[0] != currL[0] && a_t == "Still start") {
 				reference = currL;
 			}
+		}
+
+		// Draw attachments.
+		if (a_t == "Still start") {
+			for (i = 1; i < attachments.length; i++ ) {
+				reference = split(attachments[i], " ");
+				break;
+			}
+		}
+		
+		for (i = 1; i < attachments.length; i++ ) {
+			lastL = split(attachments[i - 1], " ");
+			currL = split(attachments[i], " ");
 			
+			if (lastL[0] == currL[0] && pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2) > min_square_mov && lastL[0] == currL[0] && pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2) < max_square_mov) {
+				setSlice(currL[1] + 1);
+				if (a_t == "Still start") {
+					if (pow(currL[2] - reference[2], 2) + pow(currL[3] - reference[3], 2) > max_square_mov){
+						reference = currL;
+						continue;	
+					}
+					makeArrow(round(reference[2]), round(reference[3]), round(parseFloat(reference[2]) + dynamic_magnifier(parseFloat(currL[2]) - parseFloat(reference[2]), base)), round(parseFloat(reference[3]) + dynamic_magnifier(parseFloat(currL[3]) - parseFloat(reference[3]), base)), "filled");
+				} else if (a_t == "Between frames") {
+					makeArrow(round(lastL[2]), round(lastL[3]), round(parseFloat(lastL[2]) + dynamic_magnifier(parseFloat(currL[2]) - parseFloat(lastL[2]), base)), round(parseFloat(lastL[3]) + dynamic_magnifier(parseFloat(currL[3]) - parseFloat(lastL[3]), base)), "filled");
+				}
+				run("Arrow Tool...", "width=1 size=4 color=Green style=Open");	
+				Roi.setStrokeColor("green");
+				run("Add Selection...");	
+				close("Exception");
+			} else if (lastL[0] != currL[0] && a_t == "Still start") {
+				reference = currL;
+			}
 		}
 	}
 

@@ -24,7 +24,7 @@ roi_x = []
 roi_y = []
 roi_slide_nums = []
 roi_slide_num = []
-box_p = 3
+box_p = 5
 for d in data:
     temp = d.split(" ")
     if temp[0] == ff:

@@ -1,9 +1,12 @@
 #@ ImagePlus imp
-#@ double (label = "Quality threshold") threshold
+#@ double (label = "Quality Threshold") threshold
 
 File outputFolderFile = new File("./Working_Directory.txt")
 String outputFolder = outputFolderFile.text
 outputFolder = outputFolder + "medium_products/"
+//File thresholdFile = new File(outputFolder + "quality_threshold.txt")
+//String threshold_file = thresholdFile.text
+//double threshold = threshold_file.toDouble()
 File radiusFile = new File(outputFolder + "approx_roi_radius.txt")
 String fileContent = radiusFile.text
 double radius = fileContent.toDouble()
