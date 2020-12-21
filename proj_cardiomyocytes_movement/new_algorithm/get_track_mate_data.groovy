@@ -1,12 +1,9 @@
 #@ ImagePlus imp
-#@ double (label = "Quality Threshold") threshold
+#@ double (label = "Quality threshold") threshold
 
 File outputFolderFile = new File("./Working_Directory.txt")
 String outputFolder = outputFolderFile.text
 outputFolder = outputFolder + "medium_products/"
-//File thresholdFile = new File(outputFolder + "quality_threshold.txt")
-//String threshold_file = thresholdFile.text
-//double threshold = threshold_file.toDouble()
 File radiusFile = new File(outputFolder + "approx_roi_radius.txt")
 String fileContent = radiusFile.text
 double radius = fileContent.toDouble()
@@ -15,8 +12,6 @@ double linkingMax = 5.0
 frameGap = 2
 double closingMax = 15
 
-import ij.*
-import ij.gui.Roi
 import javax.swing.*
 import fiji.plugin.trackmate.Model
 import fiji.plugin.trackmate.Settings
@@ -45,14 +40,7 @@ if (dims[4] == 1) {
 // Setup settings for TrackMate
 settings = new Settings()
 settings.setFrom(imp)
-Roi roi = new Roi(325, 475, 130, 105)
-settings.roi = roi
 settings.dt = 0.05
-//settings.roi.x = 325
-//settings.roi.y = 475
-//settings.roi.width = 130
-//settings.roi.height = 105
-
 
 settings.detectorFactory = new LogDetectorFactory()
 settings.detectorSettings = settings.detectorFactory.getDefaultSettings()
@@ -87,3 +75,5 @@ if (!filename.endsWith(".xml")) {
 outFile = new File(outputFolder, filename)
 ExportTracksToXML.export(model, settings, outFile)
 
+File qtf = new File(outputFolder + "quality_threshold.txt")
+qtf.write(threshold.toString())

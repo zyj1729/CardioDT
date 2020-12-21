@@ -267,6 +267,18 @@ function randomPosition(center, radius) {
 	return d2s(newX, 5) + " " + d2s(newY, 5);
 }
 
+function getStillROIData(data) {
+	ind = 0;
+	for (i = 1; i < data.length; i++ ) {
+		curr = split(data[i], " ");
+		if (parseInt(curr[0]) != ind) {
+				
+		} else {
+				
+		}
+	}
+}
+
 
 // A preview window to let users decide if the number of ROIs is acceptable. 
 var f;
@@ -313,13 +325,19 @@ macro "workStage" {
 		Dialog.addSlider("\t\t\t\t\t\t", 0, sliceCount, sliceCount * 0.75);
 		Dialog.addMessage("What is the minimum continuous moving frames for a qualified ROI?");
 		Dialog.addNumber("\t\t\t\t\t\t", 5, 0, 5, "frames");
+//		Dialog.addMessage("What is the minimum ROI movement to be considered?");
+//		Dialog.addNumber("\t\t\t\t\t\t", 0.1, 2, 5, "pixel");
 		Dialog.show();
 		ovalRadius = Dialog.getNumber();
 		con_th = Dialog.getNumber();
 		act_threshold = Dialog.getNumber();
+//		min_mov = Dialog.getNumber();
 		File.saveString(d2s(ovalRadius, 0), folder + "medium_products/approx_roi_radius.txt");
+//		File.saveString(d2s(act_threshold, 0) + "\n" + d2s(min_mov, 2), folder + "medium_products/periodic_parameters.txt");
 		
-		// Get the ROI track mate data by calling 2 functions. Then smooth the movement data.  
+		// Get the ROI track mate data by calling 2 functions. Then smooth the movement data. 
+		message = "Detecting ROIs ...";
+		Dialog.addMessage(message); 
 		selectImage(originId);
 		run("get track mate data");
 		run("roi xml to txt");
@@ -350,6 +368,231 @@ macro "workStage" {
 	excelB = Dialog.getCheckbox();
 	arrowB = Dialog.getCheckbox();
 	ll = Dialog.getNumber();
+	quality_threshold = File.openAsString(folder + "medium_products/quality_threshold.txt");
+
+	close("Results");
+	roiManager("Deselect");
+	roiManager("multi measure");
+	Table.save(folder + "medium_products/reference.txt");
+//	run("Read and Write Excel", "file=[" + folder + "medium_products/reference.xlsx]");
+	heads = Table.headings;
+	heads = split(heads, "\t");
+	xAxis = Array.getSequence(sliceCount);
+	getDateAndTime(year, month, dayOfWeek, dayOfMonth, hour, minute, second, msec);
+	isRe = File.isDirectory(folder + "results/");
+	if (isRe == 0) {
+		File.makeDirectory(folder + "results/");
+		isReFi = File.isDirectory(folder + "results/graphs/");
+		if (isReFi == 0) {
+			File.makeDirectory(folder + "results/graphs/");	
+		}
+	} else {
+		isReFi = File.isDirectory(folder + "results/graphs/");
+		if (isReFi == 0) {
+			File.makeDirectory(folder + "results/graphs/");	
+		}	
+	}
+	
+	temp = getInfo("image.filename");
+	if (temp == "") {
+		imageName = "untitled";
+	} else {
+		wholeName = split(temp, ".");
+		imageName = wholeName[0];
+	}
+
+	File.makeDirectory(folder + "results/graphs/" + imageName + "_" + year + "_" + month + "_" + dayOfMonth + "_" + hour + "-" + minute + "-" + second + "/");
+	str_ovalRadius = d2s(ovalRadius, 0);
+	str_con_th = d2s(con_th, 0);
+	str_act_threshold = d2s(act_threshold, 0);
+	Log = "Image: " + imageName + "\nOval Radius: " + str_ovalRadius + "\nMinimum Duration: " 
+	+ str_con_th + "\nMinimum Continuous Moving Frames: " + str_act_threshold + "\nQuality Threshold: " 
+	+ quality_threshold + "\nNumber of ROI: " + numRoi;
+	File.saveString(Log, folder + "results/graphs/" + imageName + "_" + year + "_" + month + "_" + dayOfMonth + "_" + hour + "-" + minute + "-" + second + "/log.txt");
+
+	xBrands = newArray(0);
+	yBrands = newArray(0);
+	for (i = 0; i < heads.length; i++) {
+		if (startsWith(heads[i], "X")) {
+			temp = Table.getColumn(heads[i]);
+			temp = temp[0];
+			xBrands = Array.concat(xBrands, temp);
+		}
+		if (startsWith(heads[i], "Y")) {
+			temp = Table.getColumn(heads[i]);
+			temp = temp[0];
+			yBrands = Array.concat(yBrands, temp);
+		}
+	}
+
+	brands = newArray(xBrands.length);
+	for (i = 0; i < xBrands.length; i++) {
+		for (j = 0; j < lines.length; j++) {
+			line = split(lines[j], " ");
+			if (round(parseFloat(line[2])) == xBrands[i] && round(parseFloat(line[3])) == yBrands[i]) {
+				brands[i] = line[0];
+				break;
+			}
+		}
+	}
+
+	ind = 0;
+	for (i = 0; i < heads.length; i++) {
+		if (startsWith(heads[i], "StdDev")) {
+			temp = Table.getColumn(heads[i]);
+			Plot.create("temp", "Frames", "StdDev", xAxis, temp);
+			Plot.show();
+			selectWindow("temp");
+			saveAs("png", folder + "results/graphs/" + imageName + "_" + year + "_" + month + "_" + dayOfMonth + "_" + hour + "-" + minute + "-" + second + "/" + imageName + "_roi" + brands[ind] + ".png");
+			close(imageName + "_roi" + brands[ind] + ".png");
+			ind++;
+		}
+	}	
+
+	close("Results");
+
+	selectImage(originId);
+
+
+	for (i = 1; i < lines.length; i++ ) {
+		if (i < sliceCount) {
+			setResult("Slice Number", i - 1, i + 1);
+		}
+		
+		lastL = split(lines[i - 1], " ");
+		currL = split(lines[i], " ");
+		if (mark[i] == 1) {
+			continue;	
+		}
+		if (parseInt(currL[1]) < sliceCount - 1 && i != (lines.length - 1)) {
+			nextL = split(lines[i + 1], " ");
+		}
+		if (parseInt(currL[1]) < sliceCount - 1 && lastL[0] == currL[0]) {
+			dir = getDirection(parseFloat(currL[2]), parseFloat(currL[3]), parseFloat(nextL[2]), parseFloat(nextL[3]), parseFloat(lastL[2]), parseFloat(lastL[3]), parseFloat(currL[2]), parseFloat(currL[3]));
+			bright = getPixel(lastL[2], lastL[3]);
+			
+			setResult("pixel_value_" + currL[0], lastL[1], bright);
+			setResult("start_x_" + currL[0], lastL[1], lastL[2]);
+			setResult("start_y_" + currL[0], lastL[1], lastL[3]);
+			setResult("end_x_" + currL[0], lastL[1], currL[2]);
+			setResult("end_y_" + currL[0], lastL[1], currL[3]);
+			setResult("movement_length_" + currL[0], lastL[1], sqrt(pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2)));
+			setResult("direction_change_" + currL[0] + "_degree", lastL[1], dir);
+//			setResult("periodic_ID_" + currL[0], lastL[1], currL[4]);
+			if (parseInt(currL[1]) - parseInt(lastL[1]) > 1) {
+				for (ind = 1; ind < parseInt(currL[1]) - parseInt(lastL[1]); ind++) {
+					setResult("pixel_value_" + currL[0], lastL[1] + ind, NaN);
+					setResult("start_x_" + currL[0], lastL[1] + ind, NaN);
+					setResult("start_y_" + currL[0], lastL[1] + ind, NaN);
+					setResult("end_x_" + currL[0], lastL[1] + ind, NaN);
+					setResult("end_y_" + currL[0], lastL[1] + ind, NaN);
+					setResult("movement_length_" + currL[0], lastL[1] + ind, NaN);
+					setResult("direction_change_" + currL[0] + "_degree", lastL[1] + ind, NaN);
+//					setResult("periodic_ID_" + currL[0], lastL[1], NaN);
+				}	
+			}
+		}
+	}
+
+	heads = Table.headings;
+	heads = split(heads, "	");
+	selected = newArray(0);
+	tt = 0;
+	for (i = 0; i < heads.length; i++) {
+		sep = split(heads[i], "_");
+		if (sep[0] == "pixel") {
+//			data = Table.getColumn(heads[i]);
+//			data = filterExtreme(data, 0);
+//			Array.getStatistics(data, min, max, mean, stdDev);
+//			std_data = newArray(data.length);
+//			for (j = 0; j < std_data.length; j++) {
+//				std_data[j] = (data[j] - mean) / stdDev;
+//			}
+//			The ROI satisfied the spike_filter will be marked * in the begining.
+			selected = Array.concat(selected, sep[2]);
+//			if (spike_filter(std_data, spike_num, persis, spike_gap, exact) == true) {
+//				selected = Array.concat(selected, sep[2]);
+//				Table.renameColumn("pixel_value_" + sep[2], "*pixel_value_" + sep[2]);
+//				Table.renameColumn("start_x_" + sep[2], "*start_x_" + sep[2]);
+//				Table.renameColumn("start_y_" + sep[2], "*start_y_" + sep[2]);
+//				Table.renameColumn("end_x_" + sep[2], "*end_x_" + sep[2]);
+//				Table.renameColumn("end_y_" + sep[2], "*end_y_" + sep[2]);
+//				Table.renameColumn("movement_length_" + sep[2], "*movement_length_" + sep[2]);
+//				Table.renameColumn("direction_change_" + sep[2] + "_degree", "*direction_change_" + sep[2] + "_degree");
+//			}
+		}
+		tt++;
+	}
+
+	
+	if (excelB == 1) {
+		isRe = File.isDirectory(folder + "results/");
+		if (isRe == 0) {
+			File.makeDirectory(folder + "results/");
+			isReEx = File.isDirectory(folder + "results/excel_data/");
+			if (isReEx == 0) {
+				File.makeDirectory(folder + "results/excel_data/");
+			}
+		} else {
+			isReEx = File.isDirectory(folder + "results/excel_data/");
+			if (isReEx == 0) {
+				File.makeDirectory(folder + "results/excel_data/");
+			}
+		}
+		selectImage(originId);
+		temp = getInfo("image.filename");
+		if (temp == "") {
+			imageName = "untitled";
+		} else {
+			wholeName = split(temp, ".");
+			imageName = wholeName[0];
+		}
+		
+		run("Read and Write Excel", "file=[" + folder + "results/excel_data/" + imageName + "_data.xlsx] sheet=" + year + "_" + month + "_" + dayOfMonth + "_" + hour + "-" + minute + "-" + second);
+	}
+
+	ranges = newArray(selected.length);
+	IJ.renameResults("output_data");
+	for (z = 0; z < selected.length; z++) {
+//		data = Table.getColumn("*movement_length_" + selected[z]);
+		data = Table.getColumn("movement_length_" + selected[z]);
+		Array.getStatistics(data, min, max, mean, stdDev);
+		range = max - min;
+		ranges[z] = range;
+	}
+	
+	ranges = Array.sort(ranges);
+	start = 0;
+	cap = floor(ranges.length * (1 / ll));
+	k2 = ranges.length % ll;
+	k1 = ll - k2;
+	mins = newArray(ll);
+	maxs = newArray(ll);
+	means = newArray(ll);
+	stds = newArray(ll);
+	nums = newArray(ll);
+	for (i = 0; i < ll; i++) {
+		if (i <= k1) {
+			curr = 	Array.slice(ranges, start, start + cap);
+			start = start + cap;
+		} else {
+			curr = 	Array.slice(ranges, start, start + cap + 1);
+			start = start + cap + 1;
+		}
+		Array.getStatistics(curr, min, max, mean, stdDev);
+		mins[i] = min;
+		maxs[i] = max;
+		means[i] = mean;
+		stds[i] = stdDev;
+		nums[i] = curr.length;
+	}
+	
+	Table.create("Movement_Layers");
+	Table.setColumn("num", nums);
+	Table.setColumn("mean", means);
+	Table.setColumn("stdDev", stds);
+	Table.setColumn("max", maxs);
+	Table.setColumn("min", mins);
 
 	if (animation == "Yes") {
 		Dialog.create("Arrow Animation Settings");
@@ -371,6 +614,7 @@ macro "workStage" {
 		run("Duplicate...", "title=Stage duplicate");
 		selectWindow("Stage");
 
+		print(Log);
 		// Produce attachments ROIs
 		count_mode = false;
 		which_pattern = -1;
@@ -477,105 +721,11 @@ macro "workStage" {
 		}
 	}
 
-	close("Results");
-	roiManager("Deselect");
-	roiManager("Measure");
-	
-	for (i = 1; i < lines.length; i++ ) {
-		if (i < sliceCount) {
-			setResult("Slice Number", i - 1, i + 1);
-		}
-		
-		lastL = split(lines[i - 1], " ");
-		currL = split(lines[i], " ");
-		if (mark[i] == 1) {
-			continue;	
-		}
-		if (parseInt(currL[1]) < sliceCount - 1 && i != (lines.length - 1)) {
-			nextL = split(lines[i + 1], " ");
-		}
-		if (parseInt(currL[1]) < sliceCount - 1 && lastL[0] == currL[0]) {
-			dir = getDirection(parseFloat(currL[2]), parseFloat(currL[3]), parseFloat(nextL[2]), parseFloat(nextL[3]), parseFloat(lastL[2]), parseFloat(lastL[3]), parseFloat(currL[2]), parseFloat(currL[3]));
-			bright = getPixel(lastL[2], lastL[3]);
-			
-			setResult("pixel_value_" + currL[0], lastL[1], bright);
-			setResult("start_x_" + currL[0], lastL[1], lastL[2]);
-			setResult("start_y_" + currL[0], lastL[1], lastL[3]);
-			setResult("end_x_" + currL[0], lastL[1], currL[2]);
-			setResult("end_y_" + currL[0], lastL[1], currL[3]);
-			setResult("movement_length_" + currL[0], lastL[1], sqrt(pow(currL[2] - lastL[2], 2) + pow(currL[3] - lastL[3], 2)));
-			setResult("direction_change_" + currL[0] + "_degree", lastL[1], dir);
-			if (parseInt(currL[1]) - parseInt(lastL[1]) > 1) {
-				for (ind = 1; ind < parseInt(currL[1]) - parseInt(lastL[1]); ind++) {
-					setResult("pixel_value_" + currL[0], lastL[1] + ind, NaN);
-					setResult("start_x_" + currL[0], lastL[1] + ind, NaN);
-					setResult("start_y_" + currL[0], lastL[1] + ind, NaN);
-					setResult("end_x_" + currL[0], lastL[1] + ind, NaN);
-					setResult("end_y_" + currL[0], lastL[1] + ind, NaN);
-					setResult("movement_length_" + currL[0], lastL[1] + ind, NaN);
-					setResult("direction_change_" + currL[0] + "_degree", lastL[1] + ind, NaN);
-				}	
-			}
-		}
-	}
-
-	heads = Table.headings;
-	heads = split(heads, "	");
-	selected = newArray(0);
-	tt = 0;
-	for (i = 0; i < heads.length; i++) {
-		sep = split(heads[i], "_");
-		if (sep[0] == "pixel") {
-//			data = Table.getColumn(heads[i]);
-//			data = filterExtreme(data, 0);
-//			Array.getStatistics(data, min, max, mean, stdDev);
-//			std_data = newArray(data.length);
-//			for (j = 0; j < std_data.length; j++) {
-//				std_data[j] = (data[j] - mean) / stdDev;
-//			}
-//			The ROI satisfied the spike_filter will be marked * in the begining.
-			selected = Array.concat(selected, sep[2]);
-//			if (spike_filter(std_data, spike_num, persis, spike_gap, exact) == true) {
-//				selected = Array.concat(selected, sep[2]);
-//				Table.renameColumn("pixel_value_" + sep[2], "*pixel_value_" + sep[2]);
-//				Table.renameColumn("start_x_" + sep[2], "*start_x_" + sep[2]);
-//				Table.renameColumn("start_y_" + sep[2], "*start_y_" + sep[2]);
-//				Table.renameColumn("end_x_" + sep[2], "*end_x_" + sep[2]);
-//				Table.renameColumn("end_y_" + sep[2], "*end_y_" + sep[2]);
-//				Table.renameColumn("movement_length_" + sep[2], "*movement_length_" + sep[2]);
-//				Table.renameColumn("direction_change_" + sep[2] + "_degree", "*direction_change_" + sep[2] + "_degree");
-//			}
-		}
-		tt++;
-	}
 
 	
-	if (excelB == 1) {
-		isRe = File.isDirectory(folder + "results/");
-		if (isRe == 0) {
-			File.makeDirectory(folder + "results/");
-			isReEx = File.isDirectory(folder + "results/excel_data/");
-			if (isReEx == 0) {
-				File.makeDirectory(folder + "results/excel_data/");
-			}
-		} else {
-			isReEx = File.isDirectory(folder + "results/excel_data/");
-			if (isReEx == 0) {
-				File.makeDirectory(folder + "results/excel_data/");
-			}
-		}
-		selectImage(originId);
-		temp = getInfo("image.filename");
-		if (temp == "") {
-			imageName = "untitled";
-		} else {
-			wholeName = split(temp, ".");
-			imageName = wholeName[0];
-		}
-		
-		
-		run("Read and Write Excel", "file=[" + folder + "results/excel_data/" + imageName + "_data.xlsx]");
-	}
+//	exit("test point");
+
+	
 	if (arrowB == 1) {
 		isRe = File.isDirectory(folder + "results/");
 		if (isRe == 0) {
@@ -597,52 +747,6 @@ macro "workStage" {
 		selectWindow("Stage");
 		saveAs("Tiff", folder + "results/arrows_animations/" + imageName + "_stage");
 	}
-
-	
-	ranges = newArray(selected.length);
-	for (z = 0; z < selected.length; z++) {
-//		data = Table.getColumn("*movement_length_" + selected[z]);
-		data = Table.getColumn("movement_length_" + selected[z]);
-		Array.getStatistics(data, min, max, mean, stdDev);
-		range = max - min;
-		ranges[z] = range;
-	}
-
-	IJ.renameResults("output_data");
-	ranges = Array.sort(ranges);
-	start = 0;
-	cap = floor(ranges.length * (1 / ll) + 1);
-	mins = newArray(ll);
-	maxs = newArray(ll);
-	means = newArray(ll);
-	stds = newArray(ll);
-	nums = newArray(ll);
-	ini = ranges.length % cap;
-	for (i = 0; i < ll; i++) {
-		if (i == 0) {
-			curr = 	Array.slice(ranges, start, start + ini);
-		} else {
-			curr = 	Array.slice(ranges, start, start + cap);
-		}
-		Array.getStatistics(curr, min, max, mean, stdDev);
-		mins[i] = min;
-		maxs[i] = max;
-		means[i] = mean;
-		stds[i] = stdDev;
-		nums[i] = curr.length;
-		if (i == 0) {
-			start = start + ini;	
-		} else {
-			start = start + cap;
-		}
-	}
-	
-	Table.create("Movement_Layers");
-	Table.setColumn("num", nums);
-	Table.setColumn("mean", means);
-	Table.setColumn("stdDev", stds);
-	Table.setColumn("max", maxs);
-	Table.setColumn("min", mins);
 }
 
 function getDirection(oriX, oriY, desX, desY, formOriX, formOriY, formDesX, formDesY) {
